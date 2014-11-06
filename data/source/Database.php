@@ -291,7 +291,10 @@ abstract class Database extends \lithium\data\Source {
 		);
 
 		try {
-			$this->connection = new PDO($dsn, $config['login'], $config['password'], $options);
+			$this->connection = new PDO($dsn, $config['login'], $config['password']);
+			foreach ($options as $name => $value) {
+				$this->connection->setAttribute($name, $value);
+			}
 		} catch (PDOException $e) {
 			preg_match('/SQLSTATE\[(.+?)\]/', $e->getMessage(), $code);
 			$code = $code[1] ?: 0;
