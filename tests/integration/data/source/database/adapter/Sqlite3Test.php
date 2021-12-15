@@ -1,44 +1,46 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2013, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\integration\data\source\database\adapter;
 
+use ReflectionMethod;
 use lithium\core\Libraries;
-use lithium\data\Schema;
 use lithium\data\Connections;
+use lithium\data\Schema;
 use lithium\data\model\Query;
 use lithium\data\source\database\adapter\Sqlite3;
-use lithium\tests\mocks\data\source\database\adapter\MockSqlite3;
 use lithium\tests\fixture\model\gallery\Galleries;
+use lithium\tests\mocks\data\source\database\adapter\MockSqlite3;
 
 class Sqlite3Test extends \lithium\tests\integration\data\Base {
 
-	protected $_schema = array('fields' => array(
-		'id' => array('type' => 'id'),
-		'name' => array('type' => 'string', 'length' => 255),
-		'active' => array('type' => 'boolean'),
-		'created' => array('type' => 'datetime', 'null' => true),
-		'modified' => array('type' => 'datetime', 'null' => true)
-	));
+	protected $_schema = ['fields' => [
+		'id' => ['type' => 'id'],
+		'name' => ['type' => 'string', 'length' => 255],
+		'active' => ['type' => 'boolean'],
+		'created' => ['type' => 'datetime', 'null' => true],
+		'modified' => ['type' => 'datetime', 'null' => true]
+	]];
 
 	/**
 	 * Skip the test if a Sqlite3 adapter configuration is unavailable.
 	 */
 	public function skip() {
 		parent::connect($this->_connection);
-		$this->skipIf(!$this->with(array('Sqlite3')));
+		$this->skipIf(!$this->with(['Sqlite3']));
 	}
 
 	public function setUp() {
 		$this->_db->dropSchema('galleries');
 		$schema = new Schema($this->_schema);
 		$this->_db->createSchema('galleries', $schema);
-		Galleries::config(array('meta' => array('connection' => $this->_connection)));
+		Galleries::config(['meta' => ['connection' => $this->_connection]]);
 	}
 
 	public function tearDown() {
@@ -47,8 +49,8 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testEnabledFeatures() {
-		$supported = array('booleans', 'schema', 'relationships', 'sources');
-		$notSupported = array('arrays', 'transactions');
+		$supported = ['booleans', 'schema', 'relationships', 'sources'];
+		$notSupported = ['arrays', 'transactions'];
 
 		foreach ($supported as $feature) {
 			$this->assertTrue(Sqlite3::enabled($feature));
@@ -63,13 +65,11 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 
 	/**
 	 * Tests that the object is initialized with the correct default values.
-	 *
-	 * @return void
 	 */
 	public function testConstructorDefaults() {
-		$db = new MockSqlite3(array('autoConnect' => false));
+		$db = new MockSqlite3(['autoConnect' => false, 'init' => false]);
 		$result = $db->get('_config');
-		$expected = array(
+		$expected = [
 			'autoConnect' => false,
 			'database' => ':memory:',
 			'encoding' => null,
@@ -78,20 +78,18 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 			'login' => 'root',
 			'password' => '',
 			'dsn' => null,
-			'options' => array(),
-			'init' => true
-		);
+			'options' => [],
+			'init' => false
+		];
 		$this->assertEqual($expected, $result);
 	}
 
 	/**
 	 * Tests that this adapter can connect to the database, and that the status is properly
 	 * persisted.
-	 *
-	 * @return void
 	 */
 	public function testDatabaseConnection() {
-		$db = new Sqlite3(array('autoConnect' => false) + $this->_dbConfig);
+		$db = new Sqlite3(['autoConnect' => false] + $this->_dbConfig);
 		$this->assertTrue($db->connect());
 		$this->assertTrue($db->isConnected());
 
@@ -101,10 +99,17 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 
 	public function testDatabaseEncoding() {
 		$this->assertTrue($this->_db->isConnected());
+
+		$this->assertTrue($this->_db->encoding('UTF8'));
+		$this->assertEqual('UTF-8', $this->_db->encoding());
+
 		$this->assertTrue($this->_db->encoding('utf8'));
 		$this->assertEqual('UTF-8', $this->_db->encoding());
 
 		$this->assertTrue($this->_db->encoding('UTF-8'));
+		$this->assertEqual('UTF-8', $this->_db->encoding());
+
+		$this->assertTrue($this->_db->encoding('utf-8'));
 		$this->assertEqual('UTF-8', $this->_db->encoding());
 	}
 
@@ -125,16 +130,16 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testValueWithSchema() {
-		$result = $this->_db->value('2013-01-07 13:57:03.621684', array('type' => 'timestamp'));
+		$result = $this->_db->value('2013-01-07 13:57:03.621684', ['type' => 'timestamp']);
 		$this->assertIdentical("'2013-01-07 13:57:03'", $result);
 
-		$result = $this->_db->value('2012-05-25 22:44:00', array('type' => 'timestamp'));
+		$result = $this->_db->value('2012-05-25 22:44:00', ['type' => 'timestamp']);
 		$this->assertIdentical("'2012-05-25 22:44:00'", $result);
 
-		$result = $this->_db->value('2012-00-00', array('type' => 'date'));
+		$result = $this->_db->value('2012-00-00', ['type' => 'date']);
 		$this->assertIdentical("'2011-11-30'", $result);
 
-		$result = $this->_db->value((object) "'2012-00-00'", array('type' => 'date'));
+		$result = $this->_db->value((object) "'2012-00-00'", ['type' => 'date']);
 		$this->assertIdentical("'2012-00-00'", $result);
 	}
 
@@ -145,31 +150,37 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testColumnAbstraction() {
-		$result = $this->_db->invokeMethod('_column', array('varchar'));
-		$this->assertEqual(array('type' => 'string', 'length' => 255), $result);
+		$method = new ReflectionMethod($this->_db, '_column');
+		$method->setAccessible(true);
 
-		$result = $this->_db->invokeMethod('_column', array('tinyint(1)'));
-		$this->assertEqual(array('type' => 'boolean'), $result);
+		$result = $method->invokeArgs($this->_db, ['varchar']);
+		$this->assertEqual(['type' => 'string', 'length' => 255], $result);
 
-		$result = $this->_db->invokeMethod('_column', array('varchar(255)'));
-		$this->assertEqual(array('type' => 'string', 'length' => 255), $result);
+		$result = $method->invokeArgs($this->_db, ['tinyint(1)']);
+		$this->assertEqual(['type' => 'boolean'], $result);
 
-		$result = $this->_db->invokeMethod('_column', array('text'));
-		$this->assertEqual(array('type' => 'text'), $result);
+		$result = $method->invokeArgs($this->_db, ['varchar(255)']);
+		$this->assertEqual(['type' => 'string', 'length' => 255], $result);
 
-		$result = $this->_db->invokeMethod('_column', array('text'));
-		$this->assertEqual(array('type' => 'text'), $result);
+		$result = $method->invokeArgs($this->_db, ['text']);
+		$this->assertEqual(['type' => 'text'], $result);
 
-		$result = $this->_db->invokeMethod('_column', array('decimal(12,2)'));
-		$this->assertEqual(array('type' => 'float', 'length' => 12, 'precision' => 2), $result);
+		$result = $method->invokeArgs($this->_db, ['text']);
+		$this->assertEqual(['type' => 'text'], $result);
 
-		$result = $this->_db->invokeMethod('_column', array('int(11)'));
-		$this->assertEqual(array('type' => 'integer', 'length' => 11), $result);
+		$result = $method->invokeArgs($this->_db, ['decimal(12,2)']);
+		$this->assertEqual(['type' => 'float', 'length' => 12, 'precision' => 2], $result);
+
+		$result = $method->invokeArgs($this->_db, ['int(11)']);
+		$this->assertEqual(['type' => 'integer', 'length' => 11], $result);
 	}
 
 	public function testExecuteException() {
-		$this->expectException();
-		$this->_db->read('SELECT deliberate syntax error');
+		$db = $this->_db;
+
+		$this->assertException('/.*/', function() use ($db) {
+			$db->read('SELECT deliberate syntax error');
+		});
 	}
 
 	public function testEntityQuerying() {
@@ -183,7 +194,7 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 	 * support this.
 	 */
 	public function testDeletesWithoutAliases() {
-		$delete = new Query(array('type' => 'delete', 'source' => 'galleries'));
+		$delete = new Query(['type' => 'delete', 'source' => 'galleries']);
 		$this->assertTrue($this->_db->delete($delete));
 	}
 
@@ -192,21 +203,21 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 	 */
 	public function testDescribe() {
 		$result = $this->_db->describe('galleries');
-		$expected = array(
-			'id' => array('type' => 'integer', 'null' => false, 'default' => null),
-			'name' => array(
+		$expected = [
+			'id' => ['type' => 'integer', 'null' => false, 'default' => null],
+			'name' => [
 				'type' => 'string', 'length' => 255, 'null' => false, 'default' => null
-			),
-			'active' => array(
+			],
+			'active' => [
 				'type' => 'boolean', 'null' => false, 'default' => null
-			),
-			'created' => array(
+			],
+			'created' => [
 				'type' => 'text', 'null' => false, 'default' => null
-			),
-			'modified' => array(
+			],
+			'modified' => [
 				'type' => 'text', 'null' => false, 'default' => null
-			)
-		);
+			]
+		];
 		$this->assertEqual($expected, $result->fields());
 
 		unset($expected['name']);
@@ -217,12 +228,12 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 
 	public function testResultSetInMemory() {
 		$connection = 'sqlite_memory';
-		Connections::add($connection, array(
+		Connections::add($connection, [
 			'type' => 'database',
 			'adapter' => 'Sqlite3',
 			'database' => ':memory:',
 			'encoding' => 'UTF-8'
-		));
+		]);
 		$this->_testResultSet($connection);
 	}
 
@@ -231,12 +242,12 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 		$base = Libraries::get(true, 'resources') . '/tmp/tests';
 		$this->skipIf(!is_writable($base), "Path `{$base}` is not writable.");
 		$filename = tempnam($base, "sqlite");
-		Connections::add($connection, array(
+		Connections::add($connection, [
 			'type' => 'database',
 			'adapter' => 'Sqlite3',
 			'database' => "{$filename}.sq3",
 			'encoding' => 'UTF-8'
-		));
+		]);
 		$this->_testResultSet($connection);
 		$this->_cleanUp();
 	}
@@ -248,7 +259,7 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 		$db->createSchema('galleries', $schema);
 
 		for ($i = 1; $i < 9; $i++) {
-			Galleries::create(array('id' => $i, 'name' => "Title {$i}"))->save();
+			Galleries::create(['id' => $i, 'name' => "Title {$i}"])->save();
 		}
 
 		$galleries = Galleries::all();
@@ -266,19 +277,19 @@ class Sqlite3Test extends \lithium\tests\integration\data\Base {
 	public function testDefaultValues() {
 		$this->_db->dropSchema('galleries');
 
-		$schema = new Schema(array('fields' => array(
-			'id' => array('type' => 'id'),
-			'name' => array('type' => 'string', 'length' => 255, 'default' => 'image'),
-			'active' => array('type' => 'boolean', 'default' => false),
-			'show' => array('type' => 'boolean', 'default' => true),
-			'empty' => array('type' => 'text', 'null' => true),
-			'created' => array(
+		$schema = new Schema(['fields' => [
+			'id' => ['type' => 'id'],
+			'name' => ['type' => 'string', 'length' => 255, 'default' => 'image'],
+			'active' => ['type' => 'boolean', 'default' => false],
+			'show' => ['type' => 'boolean', 'default' => true],
+			'empty' => ['type' => 'text', 'null' => true],
+			'created' => [
 				'type' => 'timestamp', 'null' => true, 'default' => (object) 'CURRENT_TIMESTAMP'
-			),
-			'modified' => array(
+			],
+			'modified' => [
 				'type' => 'timestamp', 'null' => false, 'default' => (object) 'CURRENT_TIMESTAMP'
-			)
-		)));
+			]
+		]]);
 
 		$this->_db->createSchema('galleries', $schema);
 

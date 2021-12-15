@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2011, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\integration\data;
@@ -17,11 +18,11 @@ class DocumentTest extends \lithium\tests\integration\data\Base {
 	 */
 	public function skip() {
 		parent::connect($this->_connection);
-		$this->skipIf(!$this->with(array('MongoDb', 'CouchDb')));
+		$this->skipIf(!$this->with(['MongoDb', 'CouchDb']));
 	}
 
 	public function setUp() {
-		Galleries::config(array('meta' => array('connection' => 'test')));
+		Galleries::config(['meta' => ['connection' => 'test']]);
 	}
 
 	public function tearDown() {
@@ -29,15 +30,27 @@ class DocumentTest extends \lithium\tests\integration\data\Base {
 		Galleries::reset();
 	}
 
-	public function testUpdateWithNewArray() {
-		$new = Galleries::create(array('name' => 'Poneys', 'active' => true));
+	/**
+	 * Tests that a successful find on an empty collection doesn't error out
+	 * when using count on the resulting collection returned. See issue #1042.
+	 */
+	public function testFindOnEmptyCollection() {
+		$result = Galleries::find('all');
 
-		$expected = array('name' => 'Poneys', 'active' => true);
+		$expected = 0;
+		$result = $result->count();
+		$this->assertIdentical($expected, $result);
+	}
+
+	public function testUpdateWithNewArray() {
+		$new = Galleries::create(['name' => 'Poneys', 'active' => true]);
+
+		$expected = ['name' => 'Poneys', 'active' => true];
 		$result = $new->data();
 		$this->assertEqual($expected, $result);
 
-		$new->foo = array('bar');
-		$expected = array('name' => 'Poneys', 'active' => true, 'foo' => array('bar'));
+		$new->foo = ['bar'];
+		$expected = ['name' => 'Poneys', 'active' => true, 'foo' => ['bar']];
 		$result = $new->data();
 		$this->assertEqual($expected, $result);
 

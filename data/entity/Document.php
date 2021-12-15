@@ -1,23 +1,24 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\data\entity;
 
 use RuntimeException;
-use UnexpectedValueException;
 
 /**
  * `Document` is an alternative to the `entity\Record` class, which is optimized for
- * organizing collections of entities from document-oriented databases such as CouchDB or MongoDB.
- * A `Document` object's fields can represent a collection of both simple and complex data types,
- * as well as other `Document` objects. Given the following data (document) structure:
+ * organizing collections of entities from document-oriented databases such as CouchDB
+ * or MongoDB. A `Document` object's fields can represent a collection of both simple
+ * and complex data types, as well as other `Document` objects. Given the following data
+ * (document) structure:
  *
- * {{{
+ * ```json
  * {
  * 	_id: 12345.
  * 	name: 'Acme, Inc.',
@@ -27,36 +28,40 @@ use UnexpectedValueException;
  * 		'Moe': { email: 'moe@acme.com' }
  * 	}
  * }
- * }}}
+ * ```
  *
  * You can query the object as follows:
- *
- * {{{$acme = Company::find(12345);}}}
+ * ```
+ * $acme = Company::find(12345);
+ * ```
  *
  * This returns a `Document` object, populated with the raw representation of the data.
- *
- * {{{print_r($acme->to('array'));
+ * ```
+ * print_r($acme->to('array'));
  *
  * // Yields:
- * //	array(
+ * //	[
  * //	'_id' => 12345,
  * //	'name' => 'Acme, Inc.',
- * //	'employees' => array(
- * //		'Larry' => array('email' => 'larry@acme.com'),
- * //		'Curly' => array('email' => 'curly@acme.com'),
- * //		'Moe' => array('email' => 'moe@acme.com')
- * //	)
- * //)}}}
+ * //	'employees' => [
+ * //		'Larry' => ['email' => 'larry@acme.com'],
+ * //		'Curly' => ['email' => 'curly@acme.com'],
+ * //		'Moe' => ['email' => 'moe@acme.com']
+ * //	]
+ * //]
+ * ```
  *
  * As with other database objects, a `Document` exposes its fields as object properties, like so:
- *
- * {{{echo $acme->name; // echoes 'Acme, Inc.'}}}
+ * ```
+ * echo $acme->name; // echoes 'Acme, Inc.'
+ * ```
  *
  * However, accessing a field containing a data set will return that data set wrapped in a
  * sub-`Document` object., i.e.:
- *
- * {{{$employees = $acme->employees;
- * // returns a Document object with the data in 'employees'}}}
+ * ```
+ * $employees = $acme->employees;
+ * // returns a Document object with the data in 'employees'
+ * ```
  */
 class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 
@@ -76,7 +81,7 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * @see lithium\data\collection\DocumentSet::stats()
 	 * @var array
 	 */
-	protected $_stats = array();
+	protected $_stats = [];
 
 	/**
 	 * Holds the current iteration state. Used by `Document::valid()` to terminate `foreach` loops
@@ -91,23 +96,23 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 *
 	 * @var array
 	 */
-	protected $_removed = array();
+	protected $_removed = [];
 
 	protected function _init() {
 		parent::_init();
 
 		$data = (array) $this->_data;
-		$this->_data = array();
-		$this->_updated = array();
-		$this->_removed = array();
+		$this->_data = [];
+		$this->_updated = [];
+		$this->_removed = [];
 
-		$this->_handlers += array(
-			'MongoId' => function($value) { return (string) $value; },
-			'MongoDate' => function($value) { return $value->sec; }
-		);
+		$this->_handlers += [
+			'MongoDB\BSON\ObjectId' => function($value) { return (string) $value; },
+			'MongoDB\BSON\UTCDateTime' => function($value) { return $value->toDateTime()->getTimestamp(); }
+		];
 
-		$this->set($data, array('init' => true));
-		$this->sync(null, array(), array('materialize' => $this->_exists));
+		$this->set($data, ['init' => true]);
+		$this->sync(null, [], ['materialize' => $this->_exists]);
 		unset($this->_autoConfig);
 	}
 
@@ -134,18 +139,18 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 
 		if ($field = $this->schema($name)) {
 			if (isset($field['default'])) {
-				$this->set(array($name => $field['default']));
+				$this->set([$name => $field['default']]);
 				return $this->_updated[$name];
 			}
 			if (isset($field['array']) && $field['array'] && ($model = $this->_model)) {
-				$this->_updated[$name] = $model::create(array(), array(
+				$this->_updated[$name] = $model::create([], [
 					'class' => 'set',
 					'schema' => $this->schema(),
 					'pathKey' => $this->_pathKey ? $this->_pathKey . '.' . $name : $name,
 					'parent' => $this,
 					'model' => $this->_model,
 					'defaults' => false
-				));
+				]);
 				return $this->_updated[$name];
 			}
 		}
@@ -153,17 +158,17 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 		return $null;
 	}
 
-	public function export(array $options = array()) {
+	public function export(array $options = []) {
 		foreach ($this->_updated as $key => $val) {
 			if ($val instanceof self) {
 				$path = $this->_pathKey ? "{$this->_pathKey}." : '';
 				$this->_updated[$key]->_pathKey = "{$path}{$key}";
 			}
 		}
-		return parent::export($options) + array(
+		return parent::export($options) + [
 			'key' => $this->_pathKey,
 			'remove' => $this->_removed
-		);
+		];
 	}
 
 	/**
@@ -176,8 +181,8 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 *                Otherwise, only syncs the current object. Defaults to `true`.
 	 * @return void
 	 */
-	public function sync($id = null, array $data = array(), array $options = array()) {
-		$defaults = array('recursive' => true);
+	public function sync($id = null, array $data = [], array $options = []) {
+		$defaults = ['recursive' => true];
 		$options += $defaults;
 
 		if (!$options['recursive']) {
@@ -186,7 +191,7 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 
 		foreach ($this->_updated as $key => $val) {
 			if (is_object($val) && method_exists($val, 'sync')) {
-				$nested = isset($data[$key]) ? $data[$key] : array();
+				$nested = isset($data[$key]) ? $data[$key] : [];
 				$this->_updated[$key]->sync(null, $nested, $options);
 			}
 		}
@@ -203,8 +208,8 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * @param array $options Any other options to pass when instantiating the related object.
 	 * @return object Returns a new `Document` object instance.
 	 */
-	protected function _relation($classType, $key, $data, $options = array()) {
-		return parent::_relation($classType, $key, $data, array('exists' => false) + $options);
+	protected function _relation($classType, $key, $data, $options = []) {
+		return parent::_relation($classType, $key, $data, ['exists' => false] + $options);
 	}
 
 	protected function &_getNested($name) {
@@ -236,7 +241,7 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * @return void
 	 */
 	public function __set($name, $value = null) {
-		$this->set(array($name => $value));
+		$this->set([$name => $value]);
 	}
 
 	protected function _setNested($name, $value) {
@@ -255,14 +260,14 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 			}
 
 			if ($next === null && ($model = $this->_model)) {
-				$current->set(array($key => $model::create(array(), array('defaults' => false))));
+				$current->set([$key => $model::create([], ['defaults' => false])]);
 				$next =& $current->{$key};
 			}
 			$current =& $next;
 		}
 
 		if (is_object($current)) {
-			$current->set(array(end($path) => $value));
+			$current->set([end($path) => $value]);
 		}
 	}
 
@@ -274,23 +279,28 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * @return boolean True if the field specified in `$name` exists, false otherwise.
 	 */
 	public function __isset($name) {
+		if (strpos($name, '.')) {
+			return $this->_getNested($name) !== null;
+		}
 		return isset($this->_updated[$name]);
 	}
 
 	/**
 	 * PHP magic method used when unset() is called on a `Document` instance.
+	 *
 	 * Use case for this would be when you wish to edit a document and remove a field, ie.:
-	 * {{{
-	 * $doc = Post::find($id);
+	 * ```
+	 * $doc = Posts::find($id);
 	 * unset($doc->fieldName);
 	 * $doc->save();
-	 * }}}
+	 * ```
 	 *
 	 * @param string $name The name of the field to remove.
 	 * @return void
 	 */
 	public function __unset($name) {
 		$parts = explode('.', $name, 2);
+
 		if (isset($parts[1])) {
 			unset($this->{$parts[0]}[$parts[1]]);
 		} else {
@@ -303,16 +313,16 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * Allows several properties to be assigned at once.
 	 *
 	 * For example:
-	 * {{{
-	 * $doc->set(array('title' => 'Lorem Ipsum', 'value' => 42));
-	 * }}}
+	 * ```
+	 * $doc->set(['title' => 'Lorem Ipsum', 'value' => 42]);
+	 * ```
 	 *
 	 * @param array $data An associative array of fields and values to assign to the `Document`.
 	 * @param array $options
 	 * @return void
 	 */
-	public function set(array $data, array $options = array()) {
-		$defaults = array('init' => false);
+	public function set(array $data, array $options = []) {
+		$defaults = ['init' => false];
 		$options += $defaults;
 
 		$cast = ($schema = $this->schema());
@@ -359,7 +369,7 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * @return void
 	 */
 	public function offsetSet($offset, $value) {
-		return $this->set(array($offset => $value));
+		return $this->set([$offset => $value]);
 	}
 
 	/**
@@ -422,7 +432,7 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 	 * @param array $options
 	 * @return mixed
 	 */
-	public function to($format, array $options = array()) {
+	public function to($format, array $options = []) {
 		$options['internal'] = false;
 		return parent::to($format, $options);
 	}
@@ -447,32 +457,6 @@ class Document extends \lithium\data\Entity implements \Iterator, \ArrayAccess {
 			$this->_valid = true;
 		}
 		return $this->_valid ? $this->__get(key($this->_data)) : null;
-	}
-
-	/**
-	 * Safely (atomically) increments the value of the specified field by an arbitrary value.
-	 * Defaults to `1` if no value is specified. Throws an exception if the specified field is
-	 * non-numeric.
-	 *
-	 * @param string $field The name of the field to be incrememnted.
-	 * @param integer|string $value The value to increment the field by. Defaults to `1` if this
-	 *               parameter is not specified.
-	 * @return integer Returns the current value of `$field`, based on the value retrieved from the
-	 *         data source when the entity was loaded, plus any increments applied. Note that it
-	 *         may not reflect the most current value in the persistent backend data source.
-	 * @throws UnexpectedValueException Throws an exception when `$field` is set to a non-numeric
-	 *         type.
-	 */
-	public function increment($field, $value = 1) {
-		if (!isset($this->_increment[$field])) {
-			$this->_increment[$field] = 0;
-		}
-		$this->_increment[$field] += $value;
-
-		if (!is_numeric($this->_updated[$field])) {
-			throw new UnexpectedValueException("Field `{$field}` cannot be incremented.");
-		}
-		return $this->_updated[$field] += $value;
 	}
 }
 

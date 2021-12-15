@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2012, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\analysis\logger\adapter;
@@ -11,21 +12,21 @@ namespace lithium\analysis\logger\adapter;
 use lithium\util\Inflector;
 use lithium\core\NetworkException;
 use lithium\core\Libraries;
-use Closure;
 
 /**
- * The `Growl` logger implements support for the [ Growl](http://growl.info/) notification system
- * for Mac OS X. Writing to this logger will display small, customizable status messages on the
- * screen.
+ * The `Growl` logger implements support for the Growl notification system for Mac OS X.
+ * Writing to this logger will display small, customizable status messages on the screen.
+ *
+ * @link http://growl.info
  */
-class Growl extends \lithium\core\Object {
+class Growl extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * Array that maps `Logger` message priority names to Growl-compatible priority levels.
 	 *
 	 * @var array
 	 */
-	protected $_priorities = array(
+	protected $_priorities = [
 		'emergency' => 2,
 		'alert'     => 1,
 		'critical'  => 1,
@@ -34,7 +35,7 @@ class Growl extends \lithium\core\Object {
 		'notice'    => -1,
 		'info'      => -2,
 		'debug'     => -2
-	);
+	];
 
 	/**
 	 * The Growl protocol version used to send messages.
@@ -73,45 +74,46 @@ class Growl extends \lithium\core\Object {
 	 *
 	 * @var array
 	 */
-	protected $_autoConfig = array('connection', 'registered');
+	protected $_autoConfig = ['connection', 'registered'];
 
 	/**
-	 * Growl logger constructor. Accepts an array of settings which are merged with the default
-	 * settings and used to create the connection and handle notifications.
+	 * Constructor. Growl logger constructor. Accepts an array of settings which are merged
+	 * with the default settings and used to create the connection and handle notifications.
 	 *
 	 * @see lithium\analysis\Logger::write()
 	 * @param array $config The settings to configure the logger. Available settings are as follows:
-	 *              - `'name`' _string_: The name of the application as it should appear in Growl's
-	 *                system settings. Defaults to the directory name containing your application.
-	 *              - `'host'` _string_: The Growl host with which to communicate, usually your
-	 *                local machine. Use this setting to send notifications to another machine on
-	 *                the network. Defaults to `'127.0.0.1'`.
-	 *              - `'port'` _integer_: Port of the host machine. Defaults to the standard Growl
-	 *                port, `9887`.
-	 *              - `'password'` _string_: Only required if the host machine requires a password.
-	 *                If notification or registration fails, check this against the host machine's
-	 *                Growl settings.
-	 *              - '`protocol'` _string_: Protocol to use when opening socket communication to
-	 *                Growl. Defaults to `'udp'`.
-	 *              - `'title'` _string_: The default title to display when showing Growl messages.
-	 *                The default value is the same as `'name'`, but can be changed on a per-message
-	 *                basis by specifying a `'title'` key in the `$options` parameter of
-	 *                `Logger::write()`.
-	 *              - `'notification'` _array_: A list of message types you wish to register with
-	 *                Growl to be able to send. Defaults to `array('Errors', 'Messages')`.
+	 *        - `'name`' _string_: The name of the application as it should appear in Growl's
+	 *          system settings. Defaults to the directory name containing your application.
+	 *        - `'host'` _string_: The Growl host with which to communicate, usually your
+	 *          local machine. Use this setting to send notifications to another machine on
+	 *          the network. Defaults to `'127.0.0.1'`.
+	 *        - `'port'` _integer_: Port of the host machine. Defaults to the standard Growl
+	 *          port, `9887`.
+	 *        - `'password'` _string_: Only required if the host machine requires a password.
+	 *          If notification or registration fails, check this against the host machine's
+	 *          Growl settings.
+	 *        - '`protocol'` _string_: Protocol to use when opening socket communication to
+	 *          Growl. Defaults to `'udp'`.
+	 *        - `'title'` _string_: The default title to display when showing Growl messages.
+	 *          The default value is the same as `'name'`, but can be changed on a per-message
+	 *          basis by specifying a `'title'` key in the `$options` parameter of
+	 *          `Logger::write()`.
+	 *        - `'notification'` _array_: A list of message types you wish to register with
+	 *          Growl to be able to send. Defaults to `array('Errors', 'Messages')`.
+	 * @return void
 	 */
-	public function __construct(array $config = array()) {
+	public function __construct(array $config = []) {
 		$name = basename(Libraries::get(true, 'path'));
 
-		$defaults = compact('name') + array(
+		$defaults = compact('name') + [
 			'host'     => '127.0.0.1',
 			'port'     => 9887,
 			'password' => null,
 			'protocol' => 'udp',
 			'title'    => Inflector::humanize($name),
-			'notifications' => array('Errors', 'Messages'),
+			'notifications' => ['Errors', 'Messages'],
 			'registered' => false
-		);
+		];
 		parent::__construct($config + $defaults);
 	}
 
@@ -123,20 +125,17 @@ class Growl extends \lithium\core\Object {
 	 * @param string $message Message to be shown.
 	 * @param array $options Any options that are passed to the `notify()` method. See the
 	 *              `$options` parameter of `notify()`.
-	 * @return Closure Function returning boolean `true` on successful write, `false` otherwise.
+	 * @return \Closure Function returning boolean `true` on successful write, `false` otherwise.
 	 */
-	public function write($priority, $message, array $options = array()) {
-		$_self =& $this;
-		$_priorities = $this->_priorities;
-
-		return function($self, $params) use (&$_self, $_priorities) {
+	public function write($priority, $message, array $options = []) {
+		return function($params) {
 			$priority = 0;
 			$options = $params['options'];
 
-			if (isset($options['priority']) && isset($_priorities[$options['priority']])) {
-				$priority = $_priorities[$options['priority']];
+			if (isset($options['priority']) && isset($this->_priorities[$options['priority']])) {
+				$priority = $this->_priorities[$options['priority']];
 			}
-			return $_self->notify($params['message'], compact('priority') + $options);
+			return $this->notify($params['message'], compact('priority') + $options);
 		};
 	}
 
@@ -149,22 +148,22 @@ class Growl extends \lithium\core\Object {
 	 *         name of the application's parent folder by default.
 	 * @return boolean Always returns `true`.
 	 */
-	public function notify($description = '', $options = array()) {
+	public function notify($description = '', $options = []) {
 		$this->_register();
 
-		$defaults = array('sticky' => false, 'priority' => 0, 'type' => 'Messages');
-		$options += $defaults + array('title' => $this->_config['title']);
+		$defaults = ['sticky' => false, 'priority' => 0, 'type' => 'Messages'];
+		$options += $defaults + ['title' => $this->_config['title']];
 		$type = $options['type'];
 		$title = $options['title'];
 
-		$message = compact('type', 'title', 'description') + array('app' => $this->_config['name']);
+		$message = compact('type', 'title', 'description') + ['app' => $this->_config['name']];
 		$message = array_map('utf8_encode', $message);
 
 		$flags = ($options['priority'] & 7) * 2;
 		$flags = ($options['priority'] < 0) ? $flags |= 8 : $flags;
 		$flags = ($options['sticky']) ? $flags | 256 : $flags;
 
-		$params = array('c2n5', static::PROTOCOL_VERSION, static::TYPE_NOTIFY, $flags);
+		$params = ['c2n5', static::PROTOCOL_VERSION, static::TYPE_NOTIFY, $flags];
 		$lengths = array_map('strlen', $message);
 
 		$data = call_user_func_array('pack', array_merge($params, $lengths));
@@ -236,7 +235,9 @@ class Growl extends \lithium\core\Object {
 	}
 
 	/**
-	 * Destructor method. Closes and releases the socket connection to Growl.
+	 * Destructor. Closes and releases the socket connection to Growl.
+	 *
+	 * @return void
 	 */
 	public function __destruct() {
 		if (is_resource($this->_connection)) {

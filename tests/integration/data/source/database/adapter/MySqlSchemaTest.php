@@ -1,154 +1,179 @@
 <?php
+/**
+ * li₃: the most RAD framework for PHP (http://li3.me)
+ *
+ * Copyright 2013, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
+ */
 namespace lithium\tests\integration\data\source\database\adapter;
 
-use lithium\data\Schema;
+use ReflectionMethod;
 use lithium\data\Connections;
+use lithium\data\Schema;
 use lithium\tests\mocks\data\source\database\adapter\MockMySql;
 
 class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 
 	public function skip() {
 		$connection = $this->_connection;
-		$this->_dbConfig = Connections::get($this->_connection, array('config' => true));
+		$this->_dbConfig = Connections::get($this->_connection, ['config' => true]);
 
-		$this->skipIf(!$this->with(array('MySql')));
+		$this->skipIf(!$this->with(['MySql']));
 
 		$this->_db = new MockMySql($this->_dbConfig);
-		$isConnected = $this->_db->isConnected(array('autoConnect' => true));
+		$isConnected = $this->_db->isConnected(['autoConnect' => true]);
 		$this->skipIf(!$isConnected, "No {$connection} connection available.");
 	}
 
 	public function testTableMeta() {
-		$data = array(
+		$method = new ReflectionMethod($this->_db, '_meta');
+		$method->setAccessible(true);
+
+		$data = [
 			'charset' => 'utf8',
 			'collate' => 'utf8_unicode_ci',
 			'engine' => 'InnoDB',
 			'tablespace' => 'hello'
-		);
-		$result = array();
+		];
+		$result = [];
 		foreach ($data as $key => $value) {
-			$result[] = $this->_db->invokeMethod('_meta', array('table', $key, $value));
+			$result[] = $method->invoke($this->_db, 'table', $key, $value);
 		}
-		$expected = array(
+		$expected = [
 			'DEFAULT CHARSET utf8',
 			'COLLATE utf8_unicode_ci',
 			'ENGINE InnoDB',
 			'TABLESPACE hello'
-		);
+		];
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testColumnMeta() {
-		$data = array(
+		$method = new ReflectionMethod($this->_db, '_meta');
+		$method->setAccessible(true);
+
+		$data = [
 			'charset' => 'utf8',
 			'collate' => 'utf8_unicode_ci',
 			'comment' => 'comment value'
-		);
-		$result = array();
+		];
+		$result = [];
 		foreach ($data as $key => $value) {
-			$result[] = $this->_db->invokeMethod('_meta', array('column', $key, $value));
+			$result[] = $method->invoke($this->_db, 'column', $key, $value);
 		}
-		$expected = array(
+		$expected = [
 			'CHARACTER SET utf8',
 			'COLLATE utf8_unicode_ci',
 			'COMMENT \'comment value\''
-		);
+		];
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testPrimaryKeyConstraint() {
-		$data = array(
+		$method = new ReflectionMethod($this->_db, '_constraint');
+		$method->setAccessible(true);
+
+		$data = [
 			'column' => 'id'
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('primary', $data));
+		];
+		$result = $method->invokeArgs($this->_db, ['primary', $data]);
 		$expected = 'PRIMARY KEY (`id`)';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
-			'column' => array('id', 'name')
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('primary', $data));
+		$data = [
+			'column' => ['id', 'name']
+		];
+		$result = $method->invokeArgs($this->_db, ['primary', $data]);
 		$expected = 'PRIMARY KEY (`id`, `name`)';
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testUniqueConstraint() {
-		$data = array(
+		$method = new ReflectionMethod($this->_db, '_constraint');
+		$method->setAccessible(true);
+
+		$data = [
 			'column' => 'id'
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('unique', $data));
+		];
+		$result = $method->invokeArgs($this->_db, ['unique', $data]);
 		$expected = 'UNIQUE (`id`)';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
-			'column' => array('id', 'name')
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('unique', $data));
+		$data = [
+			'column' => ['id', 'name']
+		];
+		$result = $method->invokeArgs($this->_db, ['unique', $data]);
 		$expected = 'UNIQUE (`id`, `name`)';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
-			'column' => array('id', 'name'),
+		$data = [
+			'column' => ['id', 'name'],
 			'index' => true
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('unique', $data));
+		];
+		$result = $method->invokeArgs($this->_db, ['unique', $data]);
 		$expected = 'UNIQUE INDEX (`id`, `name`)';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
-			'column' => array('id', 'name'),
+		$data = [
+			'column' => ['id', 'name'],
 			'index' => true,
 			'key' => true
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('unique', $data));
+		];
+		$result = $method->invokeArgs($this->_db, ['unique', $data]);
 		$expected = 'UNIQUE KEY (`id`, `name`)';
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testCheckConstraint() {
+		$method = new ReflectionMethod($this->_db, '_constraint');
+		$method->setAccessible(true);
 
-		$schema = new Schema(array(
-			'fields' => array(
-				'value' => array('type' => 'integer'),
-				'city' => array(
+		$schema = new Schema([
+			'fields' => [
+				'value' => ['type' => 'integer'],
+				'city' => [
 					'type' => 'string',
 					'length' => 255,
 					'null' => false
-				)
-			)
-		));
+				]
+			]
+		]);
 
-		$data = array(
-			'expr' => array(
-				'value' => array('>' => '0'),
+		$data = [
+			'expr' => [
+				'value' => ['>' => '0'],
 				'city' => 'Sandnes'
-			)
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('check', $data, $schema));
+			]
+		];
+		$result = $method->invokeArgs($this->_db, ['check', $data, $schema]);
 		$expected = 'CHECK ((`value` > 0) AND `city` = \'Sandnes\')';
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testForeignKeyConstraint() {
-		$data = array(
+		$method = new ReflectionMethod($this->_db, '_constraint');
+		$method->setAccessible(true);
+
+		$data = [
 			'column' => 'table_id',
 			'to' => 'table',
 			'toColumn' => 'id',
 			'on' => 'DELETE CASCADE'
-		);
-		$result = $this->_db->invokeMethod('_constraint', array('foreign_key', $data));
+		];
+		$result = $method->invokeArgs($this->_db, ['foreign_key', $data]);
 		$expected = 'FOREIGN KEY (`table_id`) REFERENCES `table` (`id`) ON DELETE CASCADE';
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testBuildStringColumn() {
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'string',
 			'length' => 32,
 			'null' => true,
 			'comment' => 'test'
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = '`fieldname` varchar(32) NULL COMMENT \'test\'';
 		$this->assertEqual($expected, $result);
@@ -157,12 +182,12 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 		$result = $this->_db->column($data);
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'string',
 			'length' => 32,
 			'default' => 'default value'
-		);
+		];
 
 		$result = $this->_db->column($data);
 		$expected = '`fieldname` varchar(32) DEFAULT \'default value\'';
@@ -173,25 +198,25 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 		$expected = '`fieldname` varchar(32) NOT NULL DEFAULT \'default value\'';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'string',
 			'length' => 32,
 			'null' => false,
 			'charset' => 'utf8',
 			'collate' => 'utf8_unicode_ci'
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = '`fieldname` varchar(32) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL';
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testBuildFloatColumn() {
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'float',
 			'length' => 10
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` float(10)";
 		$this->assertEqual($expected, $result);
@@ -203,61 +228,61 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testBuildTextColumn() {
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'text',
 			'default' => 'value'
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` text DEFAULT 'value'";
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'text',
 			'default' => null
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` text";
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testBuildDatetimeColumn() {
-		$data = array(
+		$data = [
 			'name' => 'created',
 			'type' => 'datetime',
 			'default' => (object) 'CURRENT_TIMESTAMP',
 			'null' => false
-		);
+		];
 
 		$result = $this->_db->column($data);
 		$expected = '`created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'created',
 			'type' => 'datetime',
 			'default' => (object) 'CURRENT_TIMESTAMP'
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = '`created` datetime DEFAULT CURRENT_TIMESTAMP';
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'modified',
 			'type' => 'datetime',
 			'null' => true
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = '`modified` datetime NULL';
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testBuildDateColumn() {
-		$data = array(
+		$data = [
 			'name' => 'created',
 			'type' => 'date'
-		);
+		];
 
 		$result = $this->_db->column($data);
 		$expected = '`created` date';
@@ -265,10 +290,10 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testBuildTimeColumn() {
-		$data = array(
+		$data = [
 			'name' => 'created',
 			'type' => 'time'
-		);
+		];
 
 		$result = $this->_db->column($data);
 		$expected = '`created` time';
@@ -276,10 +301,10 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testBooleanColumn() {
-		$data = array(
+		$data = [
 			'name' => 'bool',
 			'type' => 'boolean'
-		);
+		];
 
 		$result = $this->_db->column($data);
 		$expected = '`bool` tinyint(1)';
@@ -287,10 +312,10 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testBinaryColumn() {
-		$data = array(
+		$data = [
 			'name' => 'raw',
 			'type' => 'binary'
-		);
+		];
 
 		$result = $this->_db->column($data);
 		$expected = '`raw` blob';
@@ -298,126 +323,130 @@ class MySqlSchemaTest extends \lithium\tests\integration\data\Base {
 	}
 
 	public function testBuildColumnCastDefaultValue() {
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'integer',
 			'length' => 11,
 			'default' => 1
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` int(11) DEFAULT 1";
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'integer',
 			'length' => 11,
 			'default' => '1'
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` int(11) DEFAULT 1";
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'string',
 			'length' => 64,
 			'default' => 1
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` varchar(64) DEFAULT '1'";
 		$this->assertEqual($expected, $result);
 
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'text',
 			'default' => 15
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` text DEFAULT '15'";
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testBuildColumnBadType() {
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'badtype',
 			'null' => true
-		);
-		$this->expectException('Column type `badtype` does not exist.');
-		$this->_db->column($data);
+		];
+		$db = $this->_db;
+
+		$expected = 'Column type `badtype` does not exist.';
+		$this->assertException($expected, function () use ($db, $data) {
+			$db->column($data);
+		});
 	}
 
 	public function testOverrideType() {
-		$data = array(
+		$data = [
 			'name' => 'fieldname',
 			'type' => 'string',
 			'use' => 'decimal',
 			'length' => 11,
 			'precision' => 2
-		);
+		];
 		$result = $this->_db->column($data);
 		$expected = "`fieldname` decimal(11,2)";
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testCreateSchema() {
-		$schema = new Schema(array(
-			'fields' => array(
-				'id' => array('type' => 'id'),
-				'table_id' => array('type' => 'integer'),
-				'published' => array(
+		$schema = new Schema([
+			'fields' => [
+				'id' => ['type' => 'id'],
+				'table_id' => ['type' => 'integer'],
+				'published' => [
 					'type' => 'datetime',
 					'null' => false,
 					'default' => (object) 'CURRENT_TIMESTAMP'
-				),
-				'decimal' => array(
+				],
+				'decimal' => [
 					'type' => 'float',
 					'length' => 10,
 					'precision' => 2
-				),
-				'integer' => array(
+				],
+				'integer' => [
 					'type' => 'integer',
 					'use' => 'numeric',
 					'length' => 10,
 					'precision' => 2
-				),
-				'date' => array(
+				],
+				'date' => [
 					'type' => 'date',
 					'null' => false,
-				),
-				'text' => array(
+				],
+				'text' => [
 					'type' => 'text',
 					'null' => false,
-				)
-			),
-			'meta' => array(
-				'constraints' => array(
-					array(
+				]
+			],
+			'meta' => [
+				'constraints' => [
+					[
 						'type' => 'primary',
 						'column' => 'id'
-					),
-					array(
+					],
+					[
 						'type' => 'check',
-						'expr' => array(
-							'integer' => array('<' => 10)
-						)
-					),
-					array(
+						'expr' => [
+							'integer' => ['<' => 10]
+						]
+					],
+					[
 						'type' => 'foreign_key',
 						'column' => 'table_id',
 						'toColumn' => 'id',
 						'to' => 'other_table',
 						'on' => 'DELETE NO ACTION'
-					)
-				),
-				'table' => array(
+					]
+				],
+				'table' => [
 					'charset' => 'utf8',
 					'collate' => 'utf8_unicode_ci',
 					'engine' => 'InnoDB'
-				)
-			)
-		));
+				]
+			]
+		]);
 
 		$result = $this->_db->dropSchema('test_table');
 		$this->assertEqual('DROP TABLE IF EXISTS `test_table`;', $result);

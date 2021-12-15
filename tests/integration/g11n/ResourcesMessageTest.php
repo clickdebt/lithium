@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\integration\g11n;
@@ -19,16 +20,16 @@ use lithium\g11n\Catalog;
  */
 class ResourcesMessageTest extends \lithium\test\Integration {
 
-	protected $_backup = array();
+	protected $_backup = [];
 
 	public function setUp() {
 		$this->_backup['catalogConfig'] = Catalog::config();
-		Catalog::config(array(
-			'lithium' => array(
+		Catalog::config([
+			'lithium' => [
 				'adapter' => 'Php',
 				'path' => Libraries::get('lithium', 'path') . '/g11n/resources/php'
-			)
-		));
+			]
+		]);
 	}
 
 	public function tearDown() {
@@ -43,13 +44,11 @@ class ResourcesMessageTest extends \lithium\test\Integration {
 	 * Germanic family:
 	 * - English (en)
 	 * - German (de)
-	 *
-	 * @return void
 	 */
 	public function testPlurals1() {
-		$locales = array(
+		$locales = [
 			'en', 'de'
-		);
+		];
 		foreach ($locales as $locale) {
 			$expected = 2;
 			$result = Catalog::read(true, 'message.pluralForms', $locale);
@@ -76,13 +75,11 @@ class ResourcesMessageTest extends \lithium\test\Integration {
 	 *
 	 * Romanic family:
 	 * - French (fr)
-	 *
-	 * @return void
 	 */
 	public function testPlurals2() {
-		$locales = array(
+		$locales = [
 			'fr'
-		);
+		];
 		foreach ($locales as $locale) {
 			$expected = 2;
 			$result = Catalog::read(true, 'message.pluralForms', $locale);

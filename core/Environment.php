@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2012, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\core;
@@ -17,58 +18,58 @@ use lithium\util\Set;
  * While those three environments are the most common, you can create any arbitrary environment
  * with any set of configuration, for example:
  *
- * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testSetAndGetCurrentEnvironment(1-3)}}}
+ * ``` embed:lithium\tests\cases\core\EnvironmentTest::testSetAndGetCurrentEnvironment(1-3)```
  *
  * You can then retrieve the configurations using the key name. The correct configuration is
  * returned, automatically accounting for the current environment:
  *
- * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testSetAndGetCurrentEnvironment(15-15)}}}
+ * ``` embed:lithium\tests\cases\core\EnvironmentTest::testSetAndGetCurrentEnvironment(15-15)```
  *
  * `Environment` also works with subclasses of `Adaptable`, allowing you to maintain separate
  * configurations for database servers, cache adapters, and other environment-specific classes, for
  * example:
- * {{{
- * Connections::add('default', array(
- * 	'production' => array(
+ * ```
+ * Connections::add('default', [
+ * 	'production' => [
  * 		'type'     => 'database',
  * 		'adapter'  => 'MySql',
  * 		'host'     => 'db1.application.local',
  * 		'login'    => 'secure',
  * 		'password' => 'secret',
  * 		'database' => 'app-production'
- * 	),
- * 	'development' => array(
+ * 	],
+ * 	'development' => [
  * 		'type'     => 'database',
  * 		'adapter'  => 'MySql',
  * 		'host'     => 'localhost',
  * 		'login'    => 'root',
  * 		'password' => '',
  * 		'database' => 'app'
- * 	)
- * ));
- * }}}
+ * 	]
+ * ]);
+ * ```
  *
  * This allows the database connection named `'default'` to be connected to a local database in
  * development, and a production database in production. You can define environment-specific
  * configurations for caching, logging, even session storage, i.e.:
- * {{{
- * Cache::config(array(
- * 	'userData' => array(
- * 		'development' => array('adapter' => 'File'),
- * 		'production' => array('adapter' => 'Memcache')
- * 	)
- * ));
- * }}}
+ * ```
+ * Cache::config([
+ * 	'userData' => [
+ * 		'development' => ['adapter' => 'File'],
+ * 		'production' => ['adapter' => 'Memcache']
+ * 	]
+ * ]);
+ * ```
  *
  * When the cache configuration is accessed in the application's code, the correct configuration is
  * automatically used:
- * {{{
+ * ```
  * $user = User::find($request->id);
  * Cache::write('userData', "User.{$request->id}", $user->data(), '+5 days');
- * }}}
+ * ```
  *
- * In this configuration, the above example will automatically send cache writes to the file system
- * during local development, and to a [ memcache](http://memcached.org/) server in production.
+ * In this configuration, the above example will automatically send cache writes to the file
+ * system during local development, and to a memcache server in production.
  *
  * When writing classes that connect to other external resources, you can automatically take
  * advantage of environment-specific configurations by extending `Adaptable` and implementing
@@ -78,15 +79,16 @@ use lithium\util\Set;
  * you by automatically detecting which environment your application is running in. For additional
  * information, see the documentation for `Environment::is()`.
  *
+ * @link http://memcached.org
  * @see lithium\core\Adaptable
  */
 class Environment {
 
-	protected static $_configurations = array(
-		'production' => array(),
-		'development' => array(),
-		'test' => array()
-	);
+	protected static $_configurations = [
+		'production' => [],
+		'development' => [],
+		'test' => []
+	];
 
 	/**
 	 * Holds the name of the current environment under which the application is running. Set by
@@ -108,7 +110,7 @@ class Environment {
 	 *
 	 * @see lithium\core\Environment::_detector()
 	 * @see lithium\core\Environment::is()
-	 * @var object
+	 * @var callable
 	 */
 	protected static $_detector = null;
 
@@ -126,11 +128,11 @@ class Environment {
 		}
 		static::$_current = '';
 		static::$_detector = null;
-		static::$_configurations = array(
-			'production' => array(),
-			'development' => array(),
-			'test' => array()
-		);
+		static::$_configurations = [
+			'production' => [],
+			'development' => [],
+			'test' => []
+		];
 	}
 
 	/**
@@ -148,7 +150,7 @@ class Environment {
 	 * is assumed to be `'production'`), you can define your own detection rule set easily using a
 	 * closure that accepts an instance of the `Request` object, and returns the name of the correct
 	 * environment, as in the following example:
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testCustomDetector(1-9) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testCustomDetector(1-9) ```
 	 *
 	 * In the above example, the user-specified closure takes in a `Request` object, and using the
 	 * server data which it encapsulates, returns the correct environment name as a string.
@@ -160,7 +162,7 @@ class Environment {
 	 * each key is an environment, and each value is either an array of valid host names, or a
 	 * regular expression used to match a valid host name.
 	 *
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testDetectionWithArrayMap(1-5) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testDetectionWithArrayMap(1-5) ```
 	 *
 	 * In this example, a regular expression is being used to match local domains
 	 * (i.e. `localhost`), as well as the built-in `.console` domain, for console requests. Note
@@ -188,7 +190,7 @@ class Environment {
 		}
 		static::$_detector = function($request) use ($detect) {
 			if ($request->env || $request->command == 'test') {
-				return ($request->env) ? $request->env : 'test';
+				return $request->env ?: 'test';
 			}
 			$host = method_exists($request, 'get') ? $request->get('http:host') : '.console';
 
@@ -255,26 +257,26 @@ class Environment {
 	 * Creates, modifies or switches to an existing environment configuration. To create a new
 	 * configuration, or to update an existing configuration, pass an environment name and an array
 	 * that defines its configuration:
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testModifyEnvironmentConfig(1-1) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testModifyEnvironmentConfig(1-1) ```
 	 *
 	 * You can then add to an existing configuration by calling the `set()` method again with the
 	 * same environment name:
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testModifyEnvironmentConfig(6-6) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testModifyEnvironmentConfig(6-6) ```
 	 *
 	 * The settings for the environment will then be the aggregate of all `set()` calls:
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testModifyEnvironmentConfig(7-7) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testModifyEnvironmentConfig(7-7) ```
 	 *
 	 * By passing an array to `$env`, you can assign the same configuration to multiple
 	 * environments:
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testSetMultipleEnvironments(5-7) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testSetMultipleEnvironments(5-7) ```
 	 *
 	 * The `set()` method can also be called to manually set which environment to operate in:
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testSetAndGetCurrentEnvironment(5-5) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testSetAndGetCurrentEnvironment(5-5) ```
 	 *
 	 * Finally, `set()` can accept a `Request` object, to automatically detect the correct
 	 * environment.
 	 *
-	 * {{{ embed:lithium\tests\cases\core\EnvironmentTest::testEnvironmentDetection(9-10) }}}
+	 * ``` embed:lithium\tests\cases\core\EnvironmentTest::testEnvironmentDetection(9-10) ```
 	 *
 	 * For more information on defining custom rules to automatically detect your application's
 	 * environment, see the documentation for `Environment::is()`.
@@ -308,8 +310,11 @@ class Environment {
 			return;
 		}
 		$env = ($env === true) ? static::$_current : $env;
-		$base = isset(static::$_configurations[$env]) ? static::$_configurations[$env] : array();
-		return static::$_configurations[$env] = Set::merge($base, $config);
+
+		if (isset(static::$_configurations[$env])) {
+			$config = Set::merge(static::$_configurations[$env], $config);
+		}
+		return static::$_configurations[$env] = $config;
 	}
 
 	/**
@@ -328,7 +333,7 @@ class Environment {
 	 */
 	protected static function _detector() {
 		return static::$_detector ?: function($request) {
-			$isLocal = in_array($request->env('SERVER_ADDR'), array('::1', '127.0.0.1'));
+			$isLocal = in_array($request->env('SERVER_ADDR'), ['::1', '127.0.0.1']);
 			switch (true) {
 				case (isset($request->env)):
 					return $request->env;

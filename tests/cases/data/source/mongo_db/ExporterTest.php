@@ -1,74 +1,78 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\cases\data\source\mongo_db;
 
-use MongoId;
-use MongoDate;
+use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
+use MongoDB\BSON\Javascript;
+use MongoDB\BSON\Regex;
+use MongoDB\BSON\Binary;
 use lithium\data\Connections;
 use lithium\data\source\MongoDb;
 use lithium\data\entity\Document;
 use lithium\data\collection\DocumentSet;
 use lithium\data\source\mongo_db\Schema;
 use lithium\data\source\mongo_db\Exporter;
-use lithium\tests\mocks\data\source\mongo_db\MockResult;
+use lithium\tests\mocks\data\source\MockResult;
 use lithium\tests\mocks\data\source\MockMongoPost;
 
 class ExporterTest extends \lithium\test\Unit {
 
 	protected $_model = 'lithium\tests\mocks\data\source\MockMongoPost';
 
-	protected $_schema = array(
-		'_id' => array('type' => 'id'),
-		'guid' => array('type' => 'id'),
-		'title' => array('type' => 'string'),
-		'tags' => array('type' => 'string', 'array' => true),
-		'comments' => array('type' => 'MongoId'),
-		'accounts' => array('type' => 'object', 'array' => true),
-		'accounts._id' => array('type' => 'id'),
-		'accounts.name' => array('type' => 'string'),
-		'accounts.created' => array('type' => 'date'),
-		'authors' => array('type' => 'MongoId', 'array' => true),
-		'created' => array('type' => 'MongoDate'),
-		'modified' => array('type' => 'datetime'),
-		'voters' => array('type' => 'id', 'array' => true),
-		'rank_count' => array('type' => 'integer', 'default' => 0),
-		'rank' => array('type' => 'float', 'default' => 0.0),
-		'notifications.foo' => array('type' => 'boolean'),
-		'notifications.bar' => array('type' => 'boolean'),
-		'notifications.baz' => array('type' => 'boolean')
-	);
+	protected $_schema = [
+		'_id' => ['type' => 'id'],
+		'guid' => ['type' => 'id'],
+		'title' => ['type' => 'string'],
+		'tags' => ['type' => 'string', 'array' => true],
+		'comments' => ['type' => 'MongoDB\BSON\ObjectId'],
+		'accounts' => ['type' => 'object', 'array' => true],
+		'accounts._id' => ['type' => 'id'],
+		'accounts.name' => ['type' => 'string'],
+		'accounts.created' => ['type' => 'date'],
+		'authors' => ['type' => 'MongoDB\BSON\ObjectId', 'array' => true],
+		'created' => ['type' => 'MongoDB\BSON\UTCDateTime'],
+		'modified' => ['type' => 'datetime'],
+		'voters' => ['type' => 'id', 'array' => true],
+		'rank_count' => ['type' => 'integer', 'default' => 0],
+		'rank' => ['type' => 'float', 'default' => 0.0],
+		'notifications.foo' => ['type' => 'boolean'],
+		'notifications.bar' => ['type' => 'boolean'],
+		'notifications.baz' => ['type' => 'boolean']
+	];
 
-	protected $_handlers = array();
+	protected $_handlers = [];
 
 	public function skip() {
 		$this->skipIf(!MongoDb::enabled(), 'MongoDb is not enabled');
 	}
 
 	public function setUp() {
-		$this->_handlers = array(
+		$this->_handlers = [
 			'id' => function($v) {
-				return is_string($v) && preg_match('/^[0-9a-f]{24}$/', $v) ? new MongoId($v) : $v;
+				return is_string($v) && preg_match('/^[0-9a-f]{24}$/', $v) ? new ObjectId($v) : $v;
 			},
 			'date' => function($v) {
-				$v = is_numeric($v) ? intval($v) : strtotime($v);
-				return !$v ? new MongoDate() : new MongoDate($v);
+				$v = is_numeric($v) ? (integer) $v : strtotime($v);
+				return !$v ? new UTCDateTime() : new UTCDateTime($v * 1000);
 			},
-			'regex'   => function($v) { return new MongoRegex($v); },
+			'regex'   => function($v) { return new Regex($v); },
 			'integer' => function($v) { return (integer) $v; },
 			'float'   => function($v) { return (float) $v; },
 			'boolean' => function($v) { return (boolean) $v; },
-			'code'    => function($v) { return new MongoCode($v); },
-			'binary'  => function($v) { return new MongoBinData($v); }
-		);
+			'code'    => function($v) { return new Javascript($v); },
+			'binary'  => function($v) { return new Binary($v); }
+		];
 		$model = $this->_model;
-		Connections::add('mockconn', array('object' => new MongoDb(array('autoConnect' => false))));
-		$model::config(array('meta' => array('connection' => 'mockconn')));
+		Connections::add('mockconn', ['object' => new MongoDb(['autoConnect' => false])]);
+		$model::config(['meta' => ['connection' => 'mockconn']]);
 
 		$model::schema(false);
 		$model::schema($this->_schema);
@@ -84,68 +88,74 @@ class ExporterTest extends \lithium\test\Unit {
 
 	public function testCreateWithFixedData() {
 		$time = time();
-		$doc = new Document(array('exists' => false, 'data' => array(
-			'_id' => new MongoId(),
-			'created' => new MongoDate($time),
-			'numbers' => new DocumentSet(array('data' => array(7, 8, 9))),
-			'objects' => new DocumentSet(array('data' => array(
-				new Document(array('data' => array('foo' => 'bar'))),
-				new Document(array('data' => array('baz' => 'dib')))
-			))),
-			'deeply' => new Document(array('data' => array('nested' => 'object')))
-		)));
+		$doc = new Document(['exists' => false, 'data' => [
+			'_id' => new ObjectId(),
+			'created' => new UTCDateTime($time * 1000),
+			'numbers' => new DocumentSet(['data' => [7, 8, 9]]),
+			'objects' => new DocumentSet(['data' => [
+				new Document(['data' => ['foo' => 'bar']]),
+				new Document(['data' => ['baz' => 'dib']])
+			]]),
+			'deeply' => new Document(['data' => ['nested' => 'object']])
+		]]);
 		$this->assertEqual('object', $doc->deeply->nested);
-		$this->assertTrue($doc->_id instanceof MongoId);
+		$this->assertTrue($doc->_id instanceof ObjectId);
 
 		$result = Exporter::get('create', $doc->export());
-		$this->assertTrue($result['create']['_id'] instanceof MongoId);
-		$this->assertTrue($result['create']['created'] instanceof MongoDate);
-		$this->assertIdentical($time, $result['create']['created']->sec);
+		$this->assertTrue($result['create']['_id'] instanceof ObjectId);
+		$this->assertTrue($result['create']['created'] instanceof UTCDateTime);
+		$this->assertIdentical($time, $result['create']['created']->toDateTime()->getTimestamp());
 
-		$this->assertIdentical(array(7, 8, 9), $result['create']['numbers']);
-		$expected = array(array('foo' => 'bar'), array('baz' => 'dib'));
+		$this->assertIdentical([7, 8, 9], $result['create']['numbers']);
+		$expected = [['foo' => 'bar'], ['baz' => 'dib']];
 		$this->assertIdentical($expected, $result['create']['objects']);
-		$this->assertIdentical(array('nested' => 'object'), $result['create']['deeply']);
+		$this->assertIdentical(['nested' => 'object'], $result['create']['deeply']);
 	}
 
 	public function testCreateWithChangedData() {
-		$doc = new Document(array('exists' => false, 'data' => array(
-			'numbers' => new DocumentSet(array('data' => array(7, 8, 9))),
-			'objects' => new DocumentSet(array('data' => array(
-				new Document(array('data' => array('foo' => 'bar'))),
-				new Document(array('data' => array('baz' => 'dib')))
-			))),
-			'deeply' => new Document(array('data' => array('nested' => 'object')))
-		)));
+		$doc = new Document(['exists' => false, 'data' => [
+			'numbers' => new DocumentSet(['data' => [7, 8, 9]]),
+			'objects' => new DocumentSet(['data' => [
+				new Document(['data' => ['foo' => 'bar']]),
+				new Document(['data' => ['baz' => 'dib']])
+			]]),
+			'deeply' => new Document(['data' => ['nested' => 'object']])
+		]]);
 		$doc->numbers[] = 10;
 		$doc->deeply->nested2 = 'object2';
 		$doc->objects[1]->dib = 'gir';
 
-		$expected = array(
-			'numbers' => array(7, 8, 9, 10),
-			'objects' => array(array('foo' => 'bar'), array('baz' => 'dib', 'dib' => 'gir')),
-			'deeply' => array('nested' => 'object', 'nested2' => 'object2')
-		);
+		$expected = [
+			'numbers' => [7, 8, 9, 10],
+			'objects' => [['foo' => 'bar'], ['baz' => 'dib', 'dib' => 'gir']],
+			'deeply' => ['nested' => 'object', 'nested2' => 'object2']
+		];
 		$result = Exporter::get('create', $doc->export());
-		$this->assertEqual(array('create'), array_keys($result));
+		$this->assertEqual(['create'], array_keys($result));
 		$this->assertEqual($expected, $result['create']);
 	}
 
 	public function testUpdateWithNoChanges() {
-		$doc = new Document(array('exists' => true, 'data' => array(
-			'numbers' => new DocumentSet(array('exists' => true, 'data' => array(7, 8, 9))),
-			'objects' => new DocumentSet(array('exists' => true, 'data' => array(
-				new Document(array('exists' => true, 'data' => array('foo' => 'bar'))),
-				new Document(array('exists' => true, 'data' => array('baz' => 'dib')))
-			))),
-			'deeply' => new Document(array('exists' => true, 'data' => array('nested' => 'object')))
-		)));
+		$doc = new Document(['exists' => true, 'data' => [
+			'numbers' => new DocumentSet(['exists' => true, 'data' => [7, 8, 9]]),
+			'objects' => new DocumentSet(['exists' => true, 'data' => [
+				new Document(['exists' => true, 'data' => ['foo' => 'bar']]),
+				new Document(['exists' => true, 'data' => ['baz' => 'dib']])
+			]]),
+			'deeply' => new Document(['exists' => true, 'data' => ['nested' => 'object']])
+		]]);
 		$this->assertEmpty(Exporter::get('update', $doc->export()));
 	}
 
 	public function testUpdateFromResourceLoading() {
-		$resource = new MockResult();
-		$doc = new DocumentSet(array('model' => $this->_model, 'result' => $resource));
+		$result = new MockResult([
+			'data' => [
+				['_id' => '4c8f86167675abfabdbf0300', 'title' => 'bar'],
+				['_id' => '5c8f86167675abfabdbf0301', 'title' => 'foo'],
+				['_id' => '6c8f86167675abfabdbf0302', 'title' => 'dib']
+			]
+		]);
+		$doc = new DocumentSet(['model' => $this->_model, 'result' => $result]);
 		$this->assertEmpty(Exporter::get('update', $doc->export()));
 		$this->assertEqual('dib', $doc['6c8f86167675abfabdbf0302']->title);
 
@@ -165,104 +175,104 @@ class ExporterTest extends \lithium\test\Unit {
 	public function testUpdateWithSubObjects() {
 		$model = $this->_model;
 		$exists = true;
-		$model::config(array('meta' => array('key' => '_id')));
-		$schema = new Schema(array('fields' => array(
-			'forceArray' => array('type' => 'string', 'array' => true),
-			'array' => array('type' => 'string', 'array' => true),
-			'dictionary' => array('type' => 'string', 'array' => true),
-			'numbers' => array('type' => 'integer', 'array' => true),
-			'objects' => array('type' => 'object', 'array' => true),
-			'deeply' => array('type' => 'object', 'array' => true),
-			'foo' => array('type' => 'string')
-		)));
+		$model::config(['meta' => ['key' => '_id']]);
+		$schema = new Schema(['fields' => [
+			'forceArray' => ['type' => 'string', 'array' => true],
+			'array' => ['type' => 'string', 'array' => true],
+			'dictionary' => ['type' => 'string', 'array' => true],
+			'numbers' => ['type' => 'integer', 'array' => true],
+			'objects' => ['type' => 'object', 'array' => true],
+			'deeply' => ['type' => 'object', 'array' => true],
+			'foo' => ['type' => 'string']
+		]]);
 		$config = compact('model', 'schema', 'exists');
 
-		$doc = new Document($config + array('data' => array(
-			'numbers' => new DocumentSet($config + array(
-				'data' => array(7, 8, 9), 'pathKey' => 'numbers'
-			)),
-			'objects' => new DocumentSet($config + array('pathKey' => 'objects', 'data' => array(
-				new Document($config + array('data' => array('foo' => 'bar'))),
-				new Document($config + array('data' => array('foo' => 'baz')))
-			))),
-			'deeply' => new Document($config + array('pathKey' => 'deeply', 'data' => array(
+		$doc = new Document($config + ['data' => [
+			'numbers' => new DocumentSet($config + [
+				'data' => [7, 8, 9], 'pathKey' => 'numbers'
+			]),
+			'objects' => new DocumentSet($config + ['pathKey' => 'objects', 'data' => [
+				new Document($config + ['data' => ['foo' => 'bar']]),
+				new Document($config + ['data' => ['foo' => 'baz']])
+			]]),
+			'deeply' => new Document($config + ['pathKey' => 'deeply', 'data' => [
 				'nested' => 'object'
-			))),
+			]]),
 			'foo' => 'bar'
-		)));
+		]]);
 		$doc->dictionary[] = 'A Word';
 		$doc->forceArray = 'Word';
-		$doc->array = array('one');
+		$doc->array = ['one'];
 		$doc->field = 'value';
 		$doc->objects[1]->foo = 'dib';
-		$doc->objects[] = array('foo' => 'diz');
+		$doc->objects[] = ['foo' => 'diz'];
 		$doc->deeply->nested = 'foo';
 		$doc->deeply->nestedAgain = 'bar';
-		$doc->array = array('one');
-		$doc->newObject = new Document(array(
-			'exists' => false, 'data' => array('subField' => 'subValue')
-		));
-		$doc->newObjects = array(
-			array('test' => 'one', 'another' => 'two'),
-			array('three' => 'four')
-		);
+		$doc->array = ['one'];
+		$doc->newObject = new Document([
+			'exists' => false, 'data' => ['subField' => 'subValue']
+		]);
+		$doc->newObjects = [
+			['test' => 'one', 'another' => 'two'],
+			['three' => 'four']
+		];
 		$this->assertEqual('foo', $doc->deeply->nested);
 		$this->assertEqual('subValue', $doc->newObject->subField);
 
-		$doc->numbers = array(8, 9);
+		$doc->numbers = [8, 9];
 		$doc->numbers[] = 10;
 		$doc->numbers->append(11);
 
 		$export = $doc->export();
 
 		$result = Exporter::get('update', $doc->export());
-		$expected = array(
-			'array' => array('one'),
-			'dictionary' => array('A Word'),
-			'forceArray' => array('Word'),
-			'numbers' => array(8, 9, 10, 11),
-			'newObject' => array('subField' => 'subValue'),
-			'newObjects' => array(
-				array('test' => 'one', 'another' => 'two'),
-				array('three' => 'four')
-			),
+		$expected = [
+			'array' => ['one'],
+			'dictionary' => ['A Word'],
+			'forceArray' => ['Word'],
+			'numbers' => [8, 9, 10, 11],
+			'newObject' => ['subField' => 'subValue'],
+			'newObjects' => [
+				['test' => 'one', 'another' => 'two'],
+				['three' => 'four']
+			],
 			'field' => 'value',
 			'deeply.nested' => 'foo',
 			'deeply.nestedAgain' => 'bar',
-			'array' => array('one'),
+			'array' => ['one'],
 			'objects.1.foo' => 'dib',
-			'objects.2' => array('foo' => 'diz')
-		);
+			'objects.2' => ['foo' => 'diz']
+		];
 		$this->assertEqual($expected, $result['update']);
 
-		$doc->objects[] = array('foo' => 'dob');
+		$doc->objects[] = ['foo' => 'dob'];
 
 		$exist = $doc->objects->find(
 			function ($data) { return (strcmp($data->foo, 'dob') === 0); },
-			array('collect' => false)
+			['collect' => false]
 		);
 		$this->assertTrue(!empty($exist));
 	}
 
 	public function testFieldRemoval() {
-		$doc = new Document(array('exists' => true, 'data' => array(
-			'numbers' => new DocumentSet(array('data' => array(7, 8, 9))),
-			'deeply' => new Document(array(
-				'pathKey' => 'deeply', 'exists' => true, 'data' => array('nested' => 'object')
-			)),
+		$doc = new Document(['exists' => true, 'data' => [
+			'numbers' => new DocumentSet(['data' => [7, 8, 9]]),
+			'deeply' => new Document([
+				'pathKey' => 'deeply', 'exists' => true, 'data' => ['nested' => 'object']
+			]),
 			'foo' => 'bar'
-		)));
+		]]);
 
 		unset($doc->numbers);
 		$result = Exporter::get('update', $doc->export());
-		$this->assertEqual(array('numbers' => true), $result['remove']);
+		$this->assertEqual(['numbers' => true], $result['remove']);
 
-		$doc->set(array('flagged' => true, 'foo' => 'baz', 'bar' => 'dib'));
+		$doc->set(['flagged' => true, 'foo' => 'baz', 'bar' => 'dib']);
 		unset($doc->foo, $doc->flagged, $doc->numbers, $doc->deeply->nested);
 		$result = Exporter::get('update', $doc->export());
-		$expected = array('foo' => true, 'deeply.nested' => true, 'numbers' => true);
+		$expected = ['foo' => true, 'deeply.nested' => true, 'numbers' => true];
 		$this->assertEqual($expected, $result['remove']);
-		$this->assertEqual(array('bar' => 'dib'), $result['update']);
+		$this->assertEqual(['bar' => 'dib'], $result['update']);
 	}
 
 	/**
@@ -270,25 +280,25 @@ class ExporterTest extends \lithium\test\Unit {
 	 * whole sub-object is re-written to the new value.
 	 */
 	public function testAppendExistingObjects() {
-		$doc = new Document(array('exists' => true, 'data' => array(
-			'deeply' => new Document(array(
-				'pathKey' => 'deeply', 'exists' => true, 'data' => array('nested' => 'object')
-			)),
+		$doc = new Document(['exists' => true, 'data' => [
+			'deeply' => new Document([
+				'pathKey' => 'deeply', 'exists' => true, 'data' => ['nested' => 'object']
+			]),
 			'foo' => 'bar'
-		)));
-		$append = new Document(array('exists' => true, 'data' => array('foo' => 'bar')));
+		]]);
+		$append = new Document(['exists' => true, 'data' => ['foo' => 'bar']]);
 
 		$doc->deeply = $append;
 		$result = Exporter::get('update', $doc->export());
-		$expected = array('update' => array('deeply' => array('foo' => 'bar')));
+		$expected = ['update' => ['deeply' => ['foo' => 'bar']]];
 		$this->assertEqual($expected, $result);
 
-		$expected = array('$set' => array('deeply' => array('foo' => 'bar')));
+		$expected = ['$set' => ['deeply' => ['foo' => 'bar']]];
 		$this->assertEqual($expected, Exporter::toCommand($result));
 
 		$doc->sync();
-		$doc->append2 = new Document(array('exists' => false, 'data' => array('foo' => 'bar')));
-		$expected = array('update' => array('append2' => array('foo' => 'bar')));
+		$doc->append2 = new Document(['exists' => false, 'data' => ['foo' => 'bar']]);
+		$expected = ['update' => ['append2' => ['foo' => 'bar']]];
 		$this->assertEqual($expected, Exporter::get('update', $doc->export()));
 		$doc->sync();
 
@@ -297,15 +307,15 @@ class ExporterTest extends \lithium\test\Unit {
 		$doc->append2->bar = 'dib';
 		$doc->deeply->nested = true;
 
-		$expected = array('update' => array(
+		$expected = ['update' => [
 			'append2.foo' => 'baz', 'append2.bar' => 'dib', 'deeply.nested' => true
-		));
+		]];
 		$this->assertEqual($expected, Exporter::get('update', $doc->export()));
 	}
 
 	public function testNestedObjectCasting() {
 		$model = $this->_model;
-		$data = array('notifications' => array('foo' => '', 'bar' => '1', 'baz' => 0, 'dib' => 42));
+		$data = ['notifications' => ['foo' => '', 'bar' => '1', 'baz' => 0, 'dib' => 42]];
 		$result = $model::schema()->cast(null, null, $data, compact('model'));
 
 		$this->assertIdentical(false, $result['notifications']->foo);
@@ -316,57 +326,55 @@ class ExporterTest extends \lithium\test\Unit {
 
 	/**
 	 * Tests handling type values based on specified schema settings.
-	 *
-	 * @return void
 	 */
 	public function testTypeCasting() {
 		$time = time();
-		$data = array(
+		$data = [
 			'_id' => '4c8f86167675abfabd970300',
 			'title' => 'Foo',
 			'tags' => 'test',
-			'comments' => array(
+			'comments' => [
 				"4c8f86167675abfabdbe0300", "4c8f86167675abfabdbf0300", "4c8f86167675abfabdc00300"
-			),
-			'empty_array' => array(),
+			],
+			'empty_array' => [],
 			'authors' => '4c8f86167675abfabdb00300',
 			'created' => $time,
 			'modified' => date('Y-m-d H:i:s', $time),
 			'rank_count' => '45',
 			'rank' => '3.45688'
-		);
+		];
 		$model = $this->_model;
 		$handlers = $this->_handlers;
 		$options = compact('model', 'handlers');
-		$schema = new Schema(array('fields' => $this->_schema));
+		$schema = new Schema(['fields' => $this->_schema]);
 		$result = $schema->cast(null, null, $data, $options);
 		$this->assertEqual(array_keys($data), array_keys($result->data()));
-		$this->assertInstanceOf('MongoId', $result->_id);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->_id);
 		$this->assertEqual('4c8f86167675abfabd970300', (string) $result->_id);
 
 		$this->assertInstanceOf('lithium\data\collection\DocumentSet', $result->comments);
 		$this->assertCount(3, $result['comments']);
 
-		$this->assertInstanceOf('MongoId', $result->comments[0]);
-		$this->assertInstanceOf('MongoId', $result->comments[1]);
-		$this->assertInstanceOf('MongoId', $result->comments[2]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->comments[0]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->comments[1]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->comments[2]);
 		$this->assertEqual('4c8f86167675abfabdbe0300', (string) $result->comments[0]);
 		$this->assertEqual('4c8f86167675abfabdbf0300', (string) $result->comments[1]);
 		$this->assertEqual('4c8f86167675abfabdc00300', (string) $result->comments[2]);
 
 		$this->assertEqual($data['comments'], $result->comments->data());
-		$this->assertEqual(array('test'), $result->tags->data());
-		$this->assertEqual(array('4c8f86167675abfabdb00300'), $result->authors->data());
-		$this->assertInstanceOf('MongoId', $result->authors[0]);
+		$this->assertEqual(['test'], $result->tags->data());
+		$this->assertEqual(['4c8f86167675abfabdb00300'], $result->authors->data());
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->authors[0]);
 
-		$this->assertInstanceOf('MongoDate', $result->modified);
-		$this->assertInstanceOf('MongoDate', $result->created);
-		$this->assertGreaterThan($result->created->sec, 0);
+		$this->assertInstanceOf('MongoDB\BSON\UTCDateTime', $result->modified);
+		$this->assertInstanceOf('MongoDB\BSON\UTCDateTime', $result->created);
+		$this->assertGreaterThan($result->created->toDateTime()->getTimestamp(), 0);
 
 		$this->assertInstanceOf('lithium\data\collection\DocumentSet', $result->empty_array);
 
-		$this->assertEqual($time, $result->modified->sec);
-		$this->assertEqual($time, $result->created->sec);
+		$this->assertEqual($time, $result->modified->toDateTime()->getTimestamp());
+		$this->assertEqual($time, $result->created->toDateTime()->getTimestamp());
 
 		$this->assertIdentical(45, $result->rank_count);
 		$this->assertIdentical(3.45688, $result->rank);
@@ -374,34 +382,32 @@ class ExporterTest extends \lithium\test\Unit {
 
 	/**
 	 * Tests handling type values of subdocument arrays based on specified schema settings.
-	 *
-	 * @return void
 	 */
 	public function testTypeCastingSubObjectArrays() {
 		$time = time();
-		$data = array(
+		$data = [
 			'_id' => '4c8f86167675abfabd970300',
-			'accounts' => array(
-				array(
+			'accounts' => [
+				[
 					'_id' => "4fb6e2dd3e91581fe6e75736",
 					'name' => 'Foo',
 					'created' => $time
-				),
-				array(
+				],
+				[
 					'_id' => "4fb6e2df3e91581fe6e75737",
 					'name' => 'Bar',
 					'created' => $time
-				)
-			)
-		);
+				]
+			]
+		];
 		$model = $this->_model;
 		$handlers = $this->_handlers;
 		$options = compact('model', 'handlers');
-		$schema = new Schema(array('fields' => $this->_schema));
+		$schema = new Schema(['fields' => $this->_schema]);
 		$result = $schema->cast(null, null, $data, $options);
 
 		$this->assertEqual(array_keys($data), array_keys($result->data()));
-		$this->assertInstanceOf('MongoId', $result->_id);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->_id);
 		$this->assertEqual('4c8f86167675abfabd970300', (string) $result->_id);
 
 		$this->assertInstanceOf('lithium\data\collection\DocumentSet', $result->accounts);
@@ -409,29 +415,29 @@ class ExporterTest extends \lithium\test\Unit {
 
 		$id1 = '4fb6e2dd3e91581fe6e75736';
 		$id2 = '4fb6e2df3e91581fe6e75737';
-		$this->assertInstanceOf('MongoId', $result->accounts[$id1]['_id']);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->accounts[$id1]['_id']);
 		$this->assertEqual($id1, (string) $result->accounts[$id1]['_id']);
-		$this->assertInstanceOf('MongoId', $result->accounts[$id2]['_id']);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result->accounts[$id2]['_id']);
 		$this->assertEqual($id2, (string) $result->accounts[$id2]['_id']);
 
-		$this->assertInstanceOf('MongoDate', $result->accounts[$id1]['created']);
-		$this->assertGreaterThan($result->accounts[$id1]['created']->sec, 0);
-		$this->assertInstanceOf('MongoDate', $result->accounts[$id2]['created']);
-		$this->assertGreaterThan($result->accounts[$id2]['created']->sec, 0);
+		$this->assertInstanceOf('MongoDB\BSON\UTCDateTime', $result->accounts[$id1]['created']);
+		$this->assertGreaterThan($result->accounts[$id1]['created']->toDateTime()->getTimestamp(), 0);
+		$this->assertInstanceOf('MongoDB\BSON\UTCDateTime', $result->accounts[$id2]['created']);
+		$this->assertGreaterThan($result->accounts[$id2]['created']->toDateTime()->getTimestamp(), 0);
 	}
 
 	public function testWithArraySchema() {
 		$model = $this->_model;
-		$model::schema(array(
-			'_id' => array('type' => 'id'),
-			'list' => array('type' => 'string', 'array' => true),
-			'obj.foo' => array('type' => 'string'),
-			'obj.bar' => array('type' => 'string')
-		));
+		$model::schema([
+			'_id' => ['type' => 'id'],
+			'list' => ['type' => 'string', 'array' => true],
+			'obj.foo' => ['type' => 'string'],
+			'obj.bar' => ['type' => 'string']
+		]);
 		$doc = new Document(compact('model'));
-		$doc->list[] = array('foo' => '!!', 'bar' => '??');
+		$doc->list[] = ['foo' => '!!', 'bar' => '??'];
 
-		$data = array('list' => array(array('foo' => '!!', 'bar' => '??')));
+		$data = ['list' => [['foo' => '!!', 'bar' => '??']]];
 		$this->assertEqual($data, $doc->data());
 
 		$result = Exporter::get('create', $doc->export());
@@ -441,10 +447,10 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertEqual($data, $result['update']);
 
 		$doc = new Document(compact('model'));
-		$doc->list = array();
-		$doc->list[] = array('foo' => '!!', 'bar' => '??');
+		$doc->list = [];
+		$doc->list[] = ['foo' => '!!', 'bar' => '??'];
 
-		$data = array('list' => array(array('foo' => '!!', 'bar' => '??')));
+		$data = ['list' => [['foo' => '!!', 'bar' => '??']]];
 		$this->assertEqual($data, $doc->data());
 
 		$result = Exporter::get('create', $doc->export());
@@ -456,10 +462,10 @@ class ExporterTest extends \lithium\test\Unit {
 
 	public function testArrayConversion() {
 		$time = time();
-		$doc = new Document(array('data' => array(
-			'_id' => new MongoId(),
-			'date' => new MongoDate($time)
-		)));
+		$doc = new Document(['data' => [
+			'_id' => new ObjectId(),
+			'date' => new UTCDateTime($time * 1000)
+		]]);
 		$result = $doc->data();
 		$this->assertPattern('/^[a-f0-9]{24}$/', $result['_id']);
 		$this->assertEqual($time, $result['date']);
@@ -474,18 +480,18 @@ class ExporterTest extends \lithium\test\Unit {
 		$doc->list = 'test';
 		$doc->sync();
 		$doc->list = new DocumentSet();
-		$doc->list['id'] = array('foo' => '!!', 'bar' => '??');
-		$data = array('list' => array('id' => array('foo' => '!!', 'bar' => '??')));
+		$doc->list['id'] = ['foo' => '!!', 'bar' => '??'];
+		$data = ['list' => ['id' => ['foo' => '!!', 'bar' => '??']]];
 
 		$result = Exporter::get('update', $doc->export());
 		$this->assertEqual($data, $result['update']);
 
 		$doc = new Document();
 		$doc->someOtherField = 'someValue';
-		$doc->list = new Document(array('data' => array('foo' => '!!')));
+		$doc->list = new Document(['data' => ['foo' => '!!']]);
 		$doc->sync();
 		$doc->list = new DocumentSet();
-		$doc->list['id'] = array('foo' => '!!', 'bar' => '??');
+		$doc->list['id'] = ['foo' => '!!', 'bar' => '??'];
 
 		$result = Exporter::get('update', $doc->export());
 		$this->assertEqual($data, $result['update']);
@@ -496,18 +502,18 @@ class ExporterTest extends \lithium\test\Unit {
 	 */
 	public function testSubObjectCastingOnSave() {
 		$model = $this->_model;
-		$model::schema(array(
-			'_id' => array('type' => 'id'),
-			'sub.foo' => array('type' => 'boolean'),
-			'bar' => array('type' => 'boolean')
-		));
-		$data = array('sub' => array('foo' => 0), 'bar' => 1);
+		$model::schema([
+			'_id' => ['type' => 'id'],
+			'sub.foo' => ['type' => 'boolean'],
+			'bar' => ['type' => 'boolean']
+		]);
+		$data = ['sub' => ['foo' => 0], 'bar' => 1];
 		$doc = new Document(compact('data', 'model'));
 
 		$this->assertIdentical(true, $doc->bar);
 		$this->assertIdentical(false, $doc->sub->foo);
 
-		$data = array('sub.foo' => '1', 'bar' => '0');
+		$data = ['sub.foo' => '1', 'bar' => '0'];
 		$doc = new Document(compact('data', 'model', 'schema'));
 
 		$this->assertIdentical(false, $doc->bar);
@@ -518,30 +524,30 @@ class ExporterTest extends \lithium\test\Unit {
 	 * Tests that a nested key on a previously saved document gets updated properly.
 	 */
 	public function testExistingNestedKeyOverwrite() {
-		$doc = new Document(array('model' => $this->_model));
+		$doc = new Document(['model' => $this->_model]);
 		$doc->{'this.that'} = 'value1';
-		$this->assertEqual(array('this' => array('that' => 'value1')), $doc->data());
+		$this->assertEqual(['this' => ['that' => 'value1']], $doc->data());
 
 		$result = Exporter::get('create', $doc->export());
-		$this->assertEqual(array('create' => array('this' => array('that' => 'value1'))), $result);
+		$this->assertEqual(['create' => ['this' => ['that' => 'value1']]], $result);
 
 		$doc->sync();
 		$doc->{'this.that'} = 'value2';
-		$this->assertEqual(array('this' => array('that' => 'value2')), $doc->data());
+		$this->assertEqual(['this' => ['that' => 'value2']], $doc->data());
 
 		$result = Exporter::get('update', $doc->export());
-		$this->assertEqual(array('update' => array('this.that' => 'value2')), $result);
+		$this->assertEqual(['update' => ['this.that' => 'value2']], $result);
 	}
 
 	public function testUpdatingArraysAndExporting() {
-		$new = new Document(array('data' => array('name' => 'Acme, Inc.', 'active' => true)));
+		$new = new Document(['data' => ['name' => 'Acme, Inc.', 'active' => true]]);
 
-		$expected = array('name' => 'Acme, Inc.', 'active' => true);
+		$expected = ['name' => 'Acme, Inc.', 'active' => true];
 		$result = $new->data();
 		$this->assertEqual($expected, $result);
 
-		$new->foo = new DocumentSet(array('data' => array('bar')));
-		$expected = array('name' => 'Acme, Inc.', 'active' => true, 'foo' => array('bar'));
+		$new->foo = new DocumentSet(['data' => ['bar']]);
+		$expected = ['name' => 'Acme, Inc.', 'active' => true, 'foo' => ['bar']];
 		$result = $new->data();
 		$this->assertEqual($expected, $result);
 
@@ -563,23 +569,23 @@ class ExporterTest extends \lithium\test\Unit {
 	public function testAppendingNestedObjectArray() {
 		$model = $this->_model;
 		$model::schema(false);
-		$model::schema(array(
-			'accounts' => array('type' => 'object', 'array' => true),
-			'accounts.name' => array('type' => 'string')
-		));
+		$model::schema([
+			'accounts' => ['type' => 'object', 'array' => true],
+			'accounts.name' => ['type' => 'string']
+		]);
 		$doc = new Document(compact('model'));
-		$this->assertEqual(array(), $doc->accounts->data());
+		$this->assertEqual([], $doc->accounts->data());
 		$doc->sync();
 
-		$data = array('name' => 'New account');
+		$data = ['name' => 'New account'];
 		$doc->accounts[] = new Document(compact('data'));
 
 		$result = Exporter::get('update', $doc->export());
-		$expected = array('update' => array('accounts.0' => $data));
+		$expected = ['update' => ['accounts.0' => $data]];
 		$this->assertEqual($expected, $result);
 
 		$result = Exporter::toCommand($result);
-		$expected = array('$set' => array('accounts.0' => $data));
+		$expected = ['$set' => ['accounts.0' => $data]];
 		$this->assertEqual($expected, $result);
 	}
 
@@ -590,66 +596,66 @@ class ExporterTest extends \lithium\test\Unit {
 	}
 
 	/**
-	 * Tests the casting of MongoIds in nested arrays.
+	 * Tests the casting of ObjectIds in nested arrays.
 	 */
-	public function testNestedArrayMongoIdCasting() {
+	public function testNestedArrayObjectIdCasting() {
 
-		$articleOneId = new MongoId();
-		$bookOneId = new MongoId();
-		$bookTwoId = new MongoId();
-		$data = array(
+		$articleOneId = new ObjectId();
+		$bookOneId = new ObjectId();
+		$bookTwoId = new ObjectId();
+		$data = [
 			'_id' => '4c8f86167675abfabd970300',
 			'title' => 'Foo',
-			'similar_text' => array(
-				'articles' => array(
+			'similar_text' => [
+				'articles' => [
 					$articleOneId
-				),
-				'books' => array(
+				],
+				'books' => [
 					$bookOneId,
 					$bookTwoId
-				),
-				'magazines' => array(
+				],
+				'magazines' => [
 					"4fdfb4327a959c4f76000006",
 					"4e95f6e098ef47722d000001"
-				)
-			)
-		);
+				]
+			]
+		];
 
 		$model = $this->_model;
 		$handlers = $this->_handlers;
 		$options = compact('model', 'handlers');
 
-		$schema = new Schema(array('fields' => array(
-			'_id' => array('type' => 'MongoId'),
-			'title' => array('type' => 'text'),
-			'similar_text' => array('type' => 'array'),
-			'similar_text.articles' => array('type' => 'MongoId', 'array' => true),
-			'similar_text.books' => array('type' => 'MongoId', 'array' => true),
-			'similar_text.magazines' => array('type' => 'MongoId', 'array' => true)
-		)));
+		$schema = new Schema(['fields' => [
+			'_id' => ['type' => 'MongoDB\BSON\ObjectId'],
+			'title' => ['type' => 'text'],
+			'similar_text' => ['type' => 'array'],
+			'similar_text.articles' => ['type' => 'MongoDB\BSON\ObjectId', 'array' => true],
+			'similar_text.books' => ['type' => 'MongoDB\BSON\ObjectId', 'array' => true],
+			'similar_text.magazines' => ['type' => 'MongoDB\BSON\ObjectId', 'array' => true]
+		]]);
 		$result = $schema->cast(null, null, $data, $options);
-		$this->assertInstanceOf('MongoId', $result['similar_text']['articles'][0]);
-		$this->assertInstanceOf('MongoId', $result['similar_text']['books'][0]);
-		$this->assertInstanceOf('MongoId', $result['similar_text']['books'][1]);
-		$this->assertInstanceOf('MongoId', $result['similar_text']['magazines'][0]);
-		$this->assertInstanceOf('MongoId', $result['similar_text']['magazines'][1]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['similar_text']['articles'][0]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['similar_text']['books'][0]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['similar_text']['books'][1]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['similar_text']['magazines'][0]);
+		$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['similar_text']['magazines'][1]);
 	}
 
 	/**
-	 * Tests that updating arrays of `MongoId`s correctly preserves their type.
+	 * Tests that updating arrays of `ObjectId`s correctly preserves their type.
 	 */
-	public function testUpdatingMongoIdArray() {
-		$schema = new Schema(array('fields' => array(
-			'list' => array('type' => 'id', 'array' => true)
-		)));
+	public function testUpdatingObjectIdArray() {
+		$schema = new Schema(['fields' => [
+			'list' => ['type' => 'id', 'array' => true]
+		]]);
 
-		$doc = new Document(array('exists' => true, 'data' => array(
-			'list' => array(new MongoId(), new MongoId(), new MongoId())
-		)));
-		$this->assertEqual(array(), Exporter::get('update', $doc->export()));
+		$doc = new Document(['exists' => true, 'data' => [
+			'list' => [new ObjectId(), new ObjectId(), new ObjectId()]
+		]]);
+		$this->assertEqual([], Exporter::get('update', $doc->export()));
 
-		$doc->list[] = new MongoId();
-		$doc->list[] = new MongoId();
+		$doc->list[] = new ObjectId();
+		$doc->list[] = new ObjectId();
 		$result = Exporter::get('update', $doc->export());
 
 		$this->assertCount(1, $result);
@@ -657,13 +663,13 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertCount(5, $result['update']['list']);
 
 		for ($i = 0; $i < 5; $i++) {
-			$this->assertInstanceOf('MongoId', $result['update']['list'][$i]);
+			$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['update']['list'][$i]);
 		}
 
-		$doc = new Document(array('exists' => true, 'data' => array(
-			'list' => array(new MongoId(), new MongoId(), new MongoId())
-		)));
-		$doc->list = array(new MongoId(), new MongoId(), new MongoId());
+		$doc = new Document(['exists' => true, 'data' => [
+			'list' => [new ObjectId(), new ObjectId(), new ObjectId()]
+		]]);
+		$doc->list = [new ObjectId(), new ObjectId(), new ObjectId()];
 		$result = Exporter::get('update', $doc->export());
 
 		$this->assertCount(1, $result);
@@ -671,44 +677,44 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertCount(3, $result['update']['list']);
 
 		for ($i = 0; $i < 3; $i++) {
-			$this->assertInstanceOf('MongoId', $result['update']['list'][$i]);
+			$this->assertInstanceOf('MongoDB\BSON\ObjectId', $result['update']['list'][$i]);
 		}
 	}
 
 	public function testToDataOnDocumentSet() {
-		$data = array(
-			array(
+		$data = [
+			[
 				'_id' => '4c8f86167675abfabd970300',
-				'accounts' => array(
-					array(
+				'accounts' => [
+					[
 						'_id' => "4fb6e2dd3e91581fe6e75736",
 						'name' => 'Foo1'
-					),
-					array(
+					],
+					[
 						'_id' => "4fb6e2df3e91581fe6e75737",
 						'name' => 'Bar1'
-					)
-				)
-			),
-			array(
+					]
+				]
+			],
+			[
 				'_id' => '4c8f86167675abfabd970301',
-				'accounts' => array(
-					array(
+				'accounts' => [
+					[
 						'_id' => "4fb6e2dd3e91581fe6e75738",
 						'name' => 'Foo2'
-					),
-					array(
+					],
+					[
 						'_id' => "4fb6e2df3e91581fe6e75739",
 						'name' => 'Bar2'
-					)
-				)
-			)
-		);
+					]
+				]
+			]
+		];
 
 		$model = $this->_model;
 		$handlers = $this->_handlers;
 		$options = compact('model', 'handlers');
-		$schema = new Schema(array('fields' => $this->_schema));
+		$schema = new Schema(['fields' => $this->_schema]);
 		$set = $schema->cast(null, null, $data, $options);
 
 		$result = $set->data();
@@ -719,7 +725,7 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertEqual('Foo2', $accounts[0]['name']);
 		$this->assertEqual('Bar2', $accounts[1]['name']);
 
-		$result = $set->to('array', array('indexed' => false));
+		$result = $set->to('array', ['indexed' => false]);
 		$accounts = $result[0]['accounts'];
 		$this->assertEqual('Foo1', $accounts[0]['name']);
 		$this->assertEqual('Bar1', $accounts[1]['name']);
@@ -727,7 +733,7 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertEqual('Foo2', $accounts[0]['name']);
 		$this->assertEqual('Bar2', $accounts[1]['name']);
 
-		$result = $set->to('array', array('indexed' => true));
+		$result = $set->to('array', ['indexed' => true]);
 		$accounts = $result['4c8f86167675abfabd970300']['accounts'];
 		$this->assertEqual('Foo1', $accounts['4fb6e2dd3e91581fe6e75736']['name']);
 		$this->assertEqual('Bar1', $accounts['4fb6e2df3e91581fe6e75737']['name']);
@@ -745,24 +751,24 @@ class ExporterTest extends \lithium\test\Unit {
 	}
 
 	public function testToDataOnDocument() {
-		$data = array(
+		$data = [
 			'_id' => '4c8f86167675abfabd970300',
-			'accounts' => array(
-				array(
+			'accounts' => [
+				[
 					'_id' => "4fb6e2dd3e91581fe6e75736",
 					'name' => 'Foo1'
-				),
-				array(
+				],
+				[
 					'_id' => "4fb6e2df3e91581fe6e75737",
 					'name' => 'Bar1'
-				)
-			)
-		);
+				]
+			]
+		];
 
 		$model = $this->_model;
 		$handlers = $this->_handlers;
 		$options = compact('model', 'handlers');
-		$schema = new Schema(array('fields' => $this->_schema));
+		$schema = new Schema(['fields' => $this->_schema]);
 		$set = $schema->cast(null, null, $data, $options);
 
 		$result = $set->data();
@@ -770,53 +776,53 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertEqual('Foo1', $accounts[0]['name']);
 		$this->assertEqual('Bar1', $accounts[1]['name']);
 
-		$result = $set->to('array', array('indexed' => false));
+		$result = $set->to('array', ['indexed' => false]);
 		$accounts = $result['accounts'];
 		$this->assertEqual('Foo1', $accounts[0]['name']);
 		$this->assertEqual('Bar1', $accounts[1]['name']);
 
-		$result = $set->to('array', array('indexed' => true));
+		$result = $set->to('array', ['indexed' => true]);
 		$accounts = $result['accounts'];
 		$this->assertEqual('Foo1', $accounts['4fb6e2dd3e91581fe6e75736']['name']);
 		$this->assertEqual('Bar1', $accounts['4fb6e2df3e91581fe6e75737']['name']);
 	}
 
 	public function testIndexesOnExportingDocumentSet() {
-		$schema = new Schema(array('fields' => array(
-			'_id' => array('type' => 'id'),
-			'accounts' => array('type' => 'object', 'array' => true),
-			'accounts._id' => array('type' => 'id'),
-			'accounts.name' => array('type' => 'string')
-		)));
+		$schema = new Schema(['fields' => [
+			'_id' => ['type' => 'id'],
+			'accounts' => ['type' => 'object', 'array' => true],
+			'accounts._id' => ['type' => 'id'],
+			'accounts.name' => ['type' => 'string']
+		]]);
 
-		$data = array(
-			array(
+		$data = [
+			[
 				'_id' => '4c8f86167675abfabd970300',
-				'accounts' => array(
-					array(
+				'accounts' => [
+					[
 						'_id' => "4fb6e2dd3e91581fe6e75736",
 						'name' => 'Foo1'
-					),
-					array(
+					],
+					[
 						'_id' => "4fb6e2df3e91581fe6e75737",
 						'name' => 'Bar1'
-					)
-				)
-			),
-			array(
+					]
+				]
+			],
+			[
 				'_id' => '4c8f86167675abfabd970301',
-				'accounts' => array(
-					array(
+				'accounts' => [
+					[
 						'_id' => "4fb6e2dd3e91581fe6e75738",
 						'name' => 'Foo2'
-					),
-					array(
+					],
+					[
 						'_id' => "4fb6e2df3e91581fe6e75739",
 						'name' => 'Bar2'
-					)
-				)
-			)
-		);
+					]
+				]
+			]
+		];
 
 		$model = $this->_model;
 
@@ -848,26 +854,26 @@ class ExporterTest extends \lithium\test\Unit {
 	}
 
 	public function testIndexesOnExportingDocument() {
-		$schema = new Schema(array('fields' => array(
-			'_id' => array('type' => 'id'),
-			'accounts' => array('type' => 'object', 'array' => true),
-			'accounts._id' => array('type' => 'id'),
-			'accounts.name' => array('type' => 'string')
-		)));
+		$schema = new Schema(['fields' => [
+			'_id' => ['type' => 'id'],
+			'accounts' => ['type' => 'object', 'array' => true],
+			'accounts._id' => ['type' => 'id'],
+			'accounts.name' => ['type' => 'string']
+		]]);
 
-		$data = array(
+		$data = [
 			'_id' => '4c8f86167675abfabd970300',
-			'accounts' => array(
-				array(
+			'accounts' => [
+				[
 					'_id' => "4fb6e2dd3e91581fe6e75736",
 					'name' => 'Foo1'
-				),
-				array(
+				],
+				[
 					'_id' => "4fb6e2df3e91581fe6e75737",
 					'name' => 'Bar1'
-				)
-			)
-		);
+				]
+			]
+		];
 
 		$model = $this->_model;
 
@@ -879,23 +885,23 @@ class ExporterTest extends \lithium\test\Unit {
 		$this->assertTrue(isset($result['create']['accounts'][0]));
 		$this->assertTrue(isset($result['create']['accounts'][1]));
 
-		$export['data'] = array();
+		$export['data'] = [];
 		$result = Exporter::get('update', $export);
 		$this->assertTrue(isset($result['update']['accounts'][0]));
 		$this->assertTrue(isset($result['update']['accounts'][1]));
 	}
 
 	public function testEmptyArrayAsDocument() {
-		$schema = new Schema(array('fields' => array(
-			'_id' => array('type' => 'id'),
-			'accounts' => array('type' => 'object', 'array' => true),
-			'accounts.name' => array('type' => 'string')
-		)));
+		$schema = new Schema(['fields' => [
+			'_id' => ['type' => 'id'],
+			'accounts' => ['type' => 'object', 'array' => true],
+			'accounts.name' => ['type' => 'string']
+		]]);
 
-		$data = array(
+		$data = [
 			'_id' => '4c8f86167675abfabd970300',
-			'accounts' => array(array())
-		);
+			'accounts' => [[]]
+		];
 
 		$model = $this->_model;
 

@@ -1,15 +1,17 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\core;
 
-use lithium\core\Environment;
 use SplDoublyLinkedList;
+use lithium\core\Environment;
+use lithium\aop\Filters;
 use lithium\core\ConfigException;
 
 /**
@@ -27,7 +29,7 @@ use lithium\core\ConfigException;
  *
  * This static class should **never** be called explicitly.
  */
-class Adaptable extends \lithium\core\StaticObject {
+class Adaptable extends \lithium\core\StaticObjectDeprecated {
 
 	/**
 	 * Must always be re-defined in sub-classes. Can provide initial
@@ -35,17 +37,17 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * default options for each.
 	 *
 	 * Example:
-	 * {{{
-	 * array(
-	 *  'production' => array(),
-	 *  'development' => array(),
-	 *  'test' => array()
-	 * )
-	 * }}}
+	 * ```
+	 * [
+	 *  'production' => [],
+	 *  'development' => [],
+	 *  'test' => []
+	 * ]
+	 * ```
 	 *
-	 * @var object `Collection` of configurations, indexed by name.
+	 * @var array Array of configurations, indexed by name.
 	 */
-	protected static $_configurations = array();
+	protected static $_configurations = [];
 
 	/**
 	 * Must only be re-defined in sub-classes if the class is using strategies.
@@ -69,8 +71,9 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * Sets configurations for a particular adaptable implementation, or returns the current
 	 * configuration settings.
 	 *
-	 * @param array $config Configurations, indexed by name.
-	 * @return object `Collection` of configurations or void if setting configurations.
+	 * @param array|string $config An array of configurations, indexed by name to set
+	 *        configurations in one go or a name for which to return the configuration.
+	 * @return array|void Configuration or void if setting configurations.
 	 */
 	public static function config($config = null) {
 		if ($config && is_array($config)) {
@@ -80,7 +83,7 @@ class Adaptable extends \lithium\core\StaticObject {
 		if ($config) {
 			return static::_config($config);
 		}
-		$result = array();
+		$result = [];
 		static::$_configurations = array_filter(static::$_configurations);
 
 		foreach (array_keys(static::$_configurations) as $key) {
@@ -95,14 +98,14 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * @return void
 	 */
 	public static function reset() {
-		static::$_configurations = array();
+		static::$_configurations = [];
 	}
 
 	/**
 	 * Returns adapter class name for given `$name` configuration, using
 	 * the `$_adapter` path defined in Adaptable subclasses.
 	 *
-	 * @param string $name Class name of adapter to load.
+	 * @param string|null $name Class name of adapter to load.
 	 * @return object Adapter object.
 	 */
 	public static function adapter($name = null) {
@@ -165,8 +168,8 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * @return mixed Result of application of strategies to data. If no strategies
 	 *         have been configured, this method will simply return the original data.
 	 */
-	public static function applyStrategies($method, $name, $data, array $options = array()) {
-		$options += array('mode' => null);
+	public static function applyStrategies($method, $name, $data, array $options = []) {
+		$options += ['mode' => null];
 
 		if (!$strategies = static::strategies($name)) {
 			return $data;
@@ -211,10 +214,12 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * @param array $config The configuration array to be passed to the adapter instance. See the
 	 *              `$config` parameter of `Object::__construct()`.
 	 * @return object The adapter's class.
-	 * @filter This method can be filtered.
+	 * @filter
 	 */
 	protected static function _initAdapter($class, array $config) {
-		return static::_filter(__FUNCTION__, compact('class', 'config'), function($self, $params) {
+		$params = compact('class', 'config');
+
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
 			return new $params['class']($params['config']);
 		});
 	}
@@ -223,11 +228,11 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * Looks up an adapter by class by name.
 	 *
 	 * @see lithium\core\libraries::locate()
-	 * @param string $config Configuration array of class to be found.
+	 * @param array $config Configuration array of class to be found.
 	 * @param array $paths Optional array of search paths that will be checked.
 	 * @return string Returns a fully-namespaced class reference to the adapter class.
 	 */
-	protected static function _class($config, $paths = array()) {
+	protected static function _class($config, $paths = []) {
 		if (!$name = $config['adapter']) {
 			$self = get_called_class();
 			throw new ConfigException("No adapter set for configuration in class `{$self}`.");
@@ -247,7 +252,7 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * @param array $paths Optional array of search paths that will be checked.
 	 * @return string Returns a fully-namespaced class reference to the adapter class.
 	 */
-	protected static function _strategy($name, $paths = array()) {
+	protected static function _strategy($name, $paths = []) {
 		if (!$name) {
 			$self = get_called_class();
 			throw new ConfigException("No strategy set for configuration in class `{$self}`.");
@@ -277,15 +282,11 @@ class Adaptable extends \lithium\core\StaticObject {
 
 	/**
 	 * Gets an array of settings for the given named configuration in the current
-	 * environment.
-	 *
-	 * The default types of settings for all adapters will contain keys for:
-	 * `adapter` - The class name of the adapter
-	 * `filters` - An array of filters to be applied to the adapter methods
+	 * environment. Each configuration will at least contain an `'adapter'` option.
 	 *
 	 * @see lithium\core\Environment
 	 * @param string $name Named configuration.
-	 * @return array Settings for the named configuration.
+	 * @return array|null Settings for the named configuration.
 	 */
 	protected static function _config($name) {
 		if (!isset(static::$_configurations[$name])) {
@@ -302,7 +303,7 @@ class Adaptable extends \lithium\core\StaticObject {
 		if (isset($settings[$env]) && isset($settings[true])) {
 			$config += $settings[true];
 		}
-		static::$_configurations[$name] += array(static::_initConfig($name, $config));
+		static::$_configurations[$name] += [static::_initConfig($name, $config)];
 		return static::$_configurations[$name][0];
 	}
 
@@ -320,8 +321,7 @@ class Adaptable extends \lithium\core\StaticObject {
 	 * @return array Returns the final array of settings for the given named configuration.
 	 */
 	protected static function _initConfig($name, $config) {
-		$defaults = array('adapter' => null, 'filters' => array());
-		return (array) $config + $defaults;
+		return (array) $config + ['adapter' => null];
 	}
 }
 

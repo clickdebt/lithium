@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2012, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\g11n\multibyte\adapter;
@@ -15,9 +16,9 @@ namespace lithium\g11n\multibyte\adapter;
  * No known limitations affecting used functionality. Silently strips
  * out badly formed UTF-8 sequences.
  *
- * @link http://php.net/manual/en/book.mbstring.php
+ * @link http://php.net/book.mbstring.php
  */
-class Mbstring extends \lithium\core\Object {
+class Mbstring extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * Determines if this adapter is enabled by checking if the `mbstring` extension is loaded.
@@ -31,7 +32,7 @@ class Mbstring extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `strlen()`.
 	 *
-	 * @link http://php.net/manual/en/function.mb-strlen.php
+	 * @link http://php.net/function.mb-strlen.php
 	 * @param string $string
 	 * @return integer
 	 */
@@ -42,7 +43,7 @@ class Mbstring extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `strpos()`.
 	 *
-	 * @link http://php.net/manual/en/function.mb-strpos.php
+	 * @link http://php.net/function.mb-strpos.php
 	 * @param string $haystack
 	 * @param string $needle
 	 * @param integer $offset
@@ -55,7 +56,7 @@ class Mbstring extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `strrpos()`.
 	 *
-	 * @link http://php.net/manual/en/function.mb-strpos.php
+	 * @link http://php.net/function.mb-strpos.php
 	 * @param string $haystack
 	 * @param string $needle
 	 * @return integer|boolean
@@ -67,7 +68,7 @@ class Mbstring extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `substr()`.
 	 *
-	 * @link http://php.net/manual/en/function.mb-substr.php
+	 * @link http://php.net/function.mb-substr.php
 	 * @param string $string
 	 * @param integer $start
 	 * @param integer $length

@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2012, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\g11n\multibyte\adapter;
@@ -17,9 +18,9 @@ namespace lithium\g11n\multibyte\adapter;
  * returns `null` or `false` when input string contains badly formed UTF-8
  * sequences.
  *
- * @link http://php.net/manual/en/book.intl.php
+ * @link http://php.net/book.intl.php
  */
-class Intl extends \lithium\core\Object {
+class Intl extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * Determines if this adapter is enabled by checking if the `intl` extension is loaded.
@@ -33,7 +34,7 @@ class Intl extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `strlen()`.
 	 *
-	 * @link http://php.net/manual/en/function.grapheme-strlen.php
+	 * @link http://php.net/function.grapheme-strlen.php
 	 * @param string $string
 	 * @return integer|void
 	 */
@@ -44,7 +45,7 @@ class Intl extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `strpos()`.
 	 *
-	 * @link http://php.net/manual/en/function.grapheme-strpos.php
+	 * @link http://php.net/function.grapheme-strpos.php
 	 * @param string $haystack
 	 * @param string $needle
 	 * @param integer $offset
@@ -57,7 +58,7 @@ class Intl extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `strrpos()`.
 	 *
-	 * @link http://php.net/manual/en/function.grapheme-strpos.php
+	 * @link http://php.net/function.grapheme-strpos.php
 	 * @param string $haystack
 	 * @param string $needle
 	 * @return integer|boolean
@@ -69,7 +70,7 @@ class Intl extends \lithium\core\Object {
 	/**
 	 * Here used as a multibyte enabled equivalent of `substr()`.
 	 *
-	 * @link http://php.net/manual/en/function.grapheme-substr.php
+	 * @link http://php.net/function.grapheme-substr.php
 	 * @param string $string
 	 * @param integer $start
 	 * @param integer $length
