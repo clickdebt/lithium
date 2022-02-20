@@ -1,4 +1,11 @@
 <?php
+/**
+ * li₃: the most RAD framework for PHP (http://li3.me)
+ *
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
+ */
 
 namespace lithium\tests\mocks\storage\session\adapter;
 
@@ -9,7 +16,7 @@ class MockPhp extends \lithium\storage\session\adapter\Php {
 	 *
 	 * @return boolean false.
 	 */
-	public static function isStarted() {
+	public function isStarted() {
 		return false;
 	}
 
@@ -18,7 +25,7 @@ class MockPhp extends \lithium\storage\session\adapter\Php {
 	 *
 	 * @return boolean false.
 	 */
-	protected static function _start() {
+	protected function _start() {
 		return false;
 	}
 }

@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\mocks\storage\cache\strategy;
@@ -12,16 +13,16 @@ namespace lithium\tests\mocks\storage\cache\strategy;
  * Mock strategy.
  * For testing strategies that need construct-time parameters.
  */
-class MockConfigurizer extends \lithium\core\Object {
+class MockConfigurizer extends \lithium\core\ObjectDeprecated {
 
-	public static $parameters = array();
+	public static $parameters = [];
 
 	/**
 	 * Constructor.
 	 *
 	 * @param array $config
 	 */
-	public function __construct(array $config = array()) {
+	public function __construct(array $config = []) {
 		static::$parameters = $config;
 	}
 

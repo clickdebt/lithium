@@ -1,27 +1,28 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\console;
 
 /**
- * The `Request` class represents a console request and holds information about it's
+ * The `Request` class represents a console request and holds information about its
  * environment as well as passed arguments.
  *
  * @see lithium\console\Dispatcher
  */
-class Request extends \lithium\core\Object {
+class Request extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * The raw data passed from the command line
 	 *
 	 * @var array
 	 */
-	public $argv = array();
+	public $argv = [];
 
 	/**
 	 * Parameters parsed from arguments.
@@ -29,9 +30,9 @@ class Request extends \lithium\core\Object {
 	 * @see lithium\console\Router
 	 * @var array
 	 */
-	public $params = array(
-		'command' => null, 'action' => 'run', 'args' => array()
-	);
+	public $params = [
+		'command' => null, 'action' => 'run', 'args' => []
+	];
 
 	/**
 	 * Input (STDIN).
@@ -45,7 +46,7 @@ class Request extends \lithium\core\Object {
 	 *
 	 * @var array
 	 */
-	protected $_env = array();
+	protected $_env = [];
 
 	/**
 	 * Holds the value of the current locale, set through the `locale()` method.
@@ -59,15 +60,24 @@ class Request extends \lithium\core\Object {
 	 *
 	 * @var array
 	 */
-	protected $_autoConfig = array('env' => 'merge');
+	protected $_autoConfig = ['env' => 'merge'];
 
 	/**
-	 * Class Constructor
+	 * Constructor.
 	 *
-	 * @param array $config
+	 * @param array $config Available configuration options are:
+	 *        - `'args'` _array_
+	 *        - `'input'` _resource|null_
+	 *        - `'globals'` _boolean_: Use global variables for populating
+	 *          the request's environment and data; defaults to `true`.
+	 * @return void
 	 */
-	public function __construct($config = array()) {
-		$defaults = array('args' => array(), 'input' => null);
+	public function __construct($config = []) {
+		$defaults = [
+			'args' => [],
+			'input' => null,
+			'globals' => true
+		];
 		$config += $defaults;
 		parent::__construct($config);
 	}
@@ -83,8 +93,10 @@ class Request extends \lithium\core\Object {
 	 * @return void
 	 */
 	protected function _init() {
-		$this->_env += (array) $_SERVER + (array) $_ENV;
-		$this->_env['working'] = getcwd() ?: null;
+		if ($this->_config['globals']) {
+			$this->_env += (array) $_SERVER + (array) $_ENV;
+		}
+		$this->_env['working'] = str_replace('\\', '/', getcwd()) ?: null;
 		$argv = (array) $this->env('argv');
 		$this->_env['script'] = array_shift($argv);
 		$this->_env['PLATFORM'] = 'CLI';
@@ -174,7 +186,7 @@ class Request extends \lithium\core\Object {
 
 	/**
 	 * Sets or returns the current locale string. For more information, see
-	 * "[Globalization](http://lithify.me/docs/manual/07_globalization)" in the manual.
+	 * "[Globalization](http://li3.me/docs/book/manual/1.x/common-tasks/globalization)" in the manual.
 	 *
 	 * @param string $locale An optional locale string like `'en'`, `'en_US'` or `'de_DE'`. If
 	 *               specified, will overwrite the existing locale.
@@ -188,7 +200,6 @@ class Request extends \lithium\core\Object {
 	}
 
 	/**
-	 * Return input
 	 * Destructor. Closes input.
 	 *
 	 * @return void

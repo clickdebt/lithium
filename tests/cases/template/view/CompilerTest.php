@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\cases\template\view;
@@ -60,7 +61,7 @@ class CompilerTest extends \lithium\test\Unit {
 		$template = Compiler::template("{$this->_path}/{$this->_file}");
 		$this->assertFileExists($template);
 
-		$expected = array(
+		$expected = [
 			"<?php echo 'this is unescaped content'; ?" . ">",
 			"<?php echo \$h('this is escaped content'); ?" . ">",
 			"<?php echo \$h(\$alsoEscaped); ?" . ">",
@@ -74,25 +75,34 @@ class CompilerTest extends \lithium\test\Unit {
 			'several lines',
 			"'); ?>",
 			"<?php echo \$h('This is pre-escaped content'); ?>"
-		);
+		];
 		$result = array_map('trim', explode("\n", trim(file_get_contents($template))));
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testFallbackWithNonWritableDirectory() {
-		$this->expectException('/failed to open stream/');
-		$result = Compiler::template("{$this->_path}/{$this->_file}", array(
-			'path' => Libraries::get(true, 'path') . '/foo',
-			'fallback' => true
-		));
-		$this->assertEqual("{$this->_path}/{$this->_file}", $result);
+		$backup = error_reporting();
+		error_reporting(E_ALL);
 
-		$this->expectException('/Could not write compiled template/');
-		$this->expectException('/failed to open stream/');
-		$result = Compiler::template("{$this->_path}/{$this->_file}", array(
-			'path' => Libraries::get(true, 'path') . '/foo',
-			'fallback' => false
-		));
+		$path = $this->_path;
+		$file = $this->_file;
+
+		$this->assertException('/failed to open stream/', function() use ($path, $file) {
+			Compiler::template("{$path}/{$file}", [
+				'path' => Libraries::get(true, 'path') . '/foo',
+				'fallback' => true
+			]);
+		});
+
+		$expected = '/(Could not write compiled template|failed to open stream)/';
+		$this->assertException($expected, function() use ($path, $file) {
+			$result = Compiler::template("{$path}/{$file}", [
+				'path' => Libraries::get(true, 'path') . '/foo',
+				'fallback' => false
+			]);
+		});
+
+		error_reporting($backup);
 	}
 
 	public function testTemplateCacheHit() {

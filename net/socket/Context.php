@@ -1,15 +1,21 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\net\socket;
 
+use lithium\core\Libraries;
+
 /**
  * A socket adapter that uses PHP stream contexts.
+ *
+ * @link http://php.net/context.http
+ * @see lithium\net\socket\Stream
  */
 class Context extends \lithium\net\Socket {
 
@@ -28,12 +34,15 @@ class Context extends \lithium\net\Socket {
 	protected $_content = null;
 
 	/**
-	 * Constructor
+	 * Constructor.
 	 *
-	 * @param array $config
+	 * @param array $config Available configuration options are:
+	 *        - `'mode'` _string_
+	 *        - `'message'` _object_
+	 * @return void
 	 */
-	public function __construct(array $config = array()) {
-		$defaults = array('mode' => 'r', 'message' => null);
+	public function __construct(array $config = []) {
+		$defaults = ['mode' => 'r', 'message' => null];
 		parent::__construct($config + $defaults);
 		$this->timeout($this->_config['timeout']);
 	}
@@ -46,7 +55,7 @@ class Context extends \lithium\net\Socket {
 	 *         `'scheme'` or `'host'` settings, or if configuration fails, otherwise returns a
 	 *         resource stream.
 	 */
-	public function open(array $options = array()) {
+	public function open(array $options = []) {
 		parent::open($options);
 		$config = $this->_config;
 
@@ -54,11 +63,11 @@ class Context extends \lithium\net\Socket {
 			return false;
 		}
 		$url = "{$config['scheme']}://{$config['host']}:{$config['port']}";
-		$context = array($config['scheme'] => array('timeout' => $this->_timeout));
+		$context = [$config['scheme'] => ['timeout' => $this->_timeout]];
 
 		if (is_object($config['message'])) {
 			$url = $config['message']->to('url');
-			$context = $config['message']->to('context', array('timeout' => $this->_timeout));
+			$context = $config['message']->to('context', ['timeout' => $this->_timeout]);
 		}
 		$this->_resource = fopen($url, $config['mode'], false, stream_context_create($context));
 		return $this->_resource;
@@ -70,14 +79,7 @@ class Context extends \lithium\net\Socket {
 	 * @return boolean Success.
 	 */
 	public function close() {
-		if (!is_resource($this->_resource)) {
-			return true;
-		}
-		fclose($this->_resource);
-		if (is_resource($this->_resource)) {
-			$this->close();
-		}
-		return true;
+		return !is_resource($this->_resource) || fclose($this->_resource);
 	}
 
 	/**
@@ -95,7 +97,7 @@ class Context extends \lithium\net\Socket {
 	/**
 	 * Reads from the socket. Does not apply to this implementation.
 	 *
-	 * @return void
+	 * @return boolean|string
 	 */
 	public function read() {
 		if (!is_resource($this->_resource)) {
@@ -121,10 +123,12 @@ class Context extends \lithium\net\Socket {
 			return false;
 		}
 		if (!is_object($data)) {
-			$data = $this->_instance($this->_classes['request'], (array) $data + $this->_config);
+			$data = Libraries::instance(
+				null, 'request', (array) $data + $this->_config, $this->_classes
+			);
 		}
 		return stream_context_set_option(
-			$this->_resource, $data->to('context', array('timeout' => $this->_timeout))
+			$this->_resource, $data->to('context', ['timeout' => $this->_timeout])
 		);
 	}
 

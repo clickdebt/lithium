@@ -1,22 +1,24 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\cases\console\command\create;
 
-use lithium\console\command\create\Controller;
+use ReflectionMethod;
 use lithium\console\Request;
+use lithium\console\command\create\Controller;
 use lithium\core\Libraries;
 
 class ControllerTest extends \lithium\test\Unit {
 
 	public $request;
 
-	protected $_backup = array();
+	protected $_backup = [];
 
 	protected $_testPath = null;
 
@@ -26,14 +28,14 @@ class ControllerTest extends \lithium\test\Unit {
 	}
 
 	public function setUp() {
-		$this->classes = array('response' => 'lithium\tests\mocks\console\MockResponse');
+		$this->classes = ['response' => 'lithium\tests\mocks\console\MockResponse'];
 		$this->_backup['cwd'] = getcwd();
 		$this->_backup['_SERVER'] = $_SERVER;
-		$_SERVER['argv'] = array();
+		$_SERVER['argv'] = [];
 
-		Libraries::add('create_test', array('path' => $this->_testPath . '/create_test'));
-		$this->request = new Request(array('input' => fopen('php://temp', 'w+')));
-		$this->request->params = array('library' => 'create_test');
+		Libraries::add('create_test', ['path' => $this->_testPath . '/create_test']);
+		$this->request = new Request(['input' => fopen('php://temp', 'w+')]);
+		$this->request->params = ['library' => 'create_test'];
 	}
 
 	public function tearDown() {
@@ -43,39 +45,44 @@ class ControllerTest extends \lithium\test\Unit {
 	}
 
 	public function testClass() {
-		$this->request->params += array(
+		$this->request->params += [
 			'command' => 'controller', 'action' => 'Posts'
-		);
-		$model = new Controller(array(
+		];
+		$model = new Controller([
 			'request' => $this->request, 'classes' => $this->classes
-		));
+		]);
+		$method = new ReflectionMethod($model, '_class');
+		$method->setAccessible(true);
 
 		$expected = 'PostsController';
-		$result = $model->invokeMethod('_class', array($this->request));
+		$result = $method->invokeArgs($model, [$this->request]);
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testUse() {
-		$this->request->params += array(
+		$this->request->params += [
 			'command' => 'controller', 'action' => 'Posts'
-		);
-		$model = new Controller(array(
+		];
+		$model = new Controller([
 			'request' => $this->request, 'classes' => $this->classes
-		));
+		]);
+
+		$method = new ReflectionMethod($model, '_use');
+		$method->setAccessible(true);
 
 		$expected = 'create_test\\models\\Posts';
-		$result = $model->invokeMethod('_use', array($this->request));
+		$result = $method->invokeArgs($model, [$this->request]);
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testRun() {
-		$this->request->params += array(
+		$this->request->params += [
 			'command' => 'create', 'action' => 'controller',
-			'args' => array('Posts')
-		);
-		$controller = new Controller(array(
+			'args' => ['Posts']
+		];
+		$controller = new Controller([
 			'request' => $this->request, 'classes' => $this->classes
-		));
+		]);
 		$controller->path = $this->_testPath;
 		$controller->run('controller');
 		$expected = "PostsController created in controllers/PostsController.php.\n";
@@ -106,7 +113,7 @@ class PostsController extends \lithium\action\Controller {
 		$post = Posts::create();
 
 		if (($this->request->data) && $post->save($this->request->data)) {
-			return $this->redirect(array('Posts::view', 'args' => array($post->id)));
+			return $this->redirect(['Posts::view', 'args' => [$post->id]]);
 		}
 		return compact('post');
 	}
@@ -118,7 +125,7 @@ class PostsController extends \lithium\action\Controller {
 			return $this->redirect('Posts::index');
 		}
 		if (($this->request->data) && $post->save($this->request->data)) {
-			return $this->redirect(array('Posts::view', 'args' => array($post->id)));
+			return $this->redirect(['Posts::view', 'args' => [$post->id]]);
 		}
 		return compact('post');
 	}
@@ -135,7 +142,7 @@ class PostsController extends \lithium\action\Controller {
 
 
 test;
-		$replace = array("<?php", "?>");
+		$replace = ["<?php", "?>"];
 		$result = str_replace($replace, '',
 			file_get_contents($this->_testPath . '/create_test/controllers/PostsController.php')
 		);

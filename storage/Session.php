@@ -1,12 +1,15 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\storage;
+
+use lithium\aop\Filters;
 
 /**
  * The `Session` static class provides a consistent interface to configure and utilize the
@@ -35,7 +38,7 @@ class Session extends \lithium\core\Adaptable {
 	 *
 	 * @var array
 	 */
-	protected static $_configurations = array();
+	protected static $_configurations = [];
 
 	/**
 	 * A dot-separated path for use by `Libraries::locate()`. Used to look up the correct type of
@@ -86,13 +89,12 @@ class Session extends \lithium\core\Adaptable {
 	 *              - `'strategies'` _boolean_: Indicates whether or not a configuration's applied
 	 *                strategy classes should be enabled for this operation. Defaults to `true`.
 	 * @return mixed Read result on successful session read, `null` otherwise.
-	 * @filter This method may be filtered.
+	 * @filter
 	 */
-	public static function read($key = null, array $options = array()) {
-		$defaults = array('name' => null, 'strategies' => true);
+	public static function read($key = null, array $options = []) {
+		$defaults = ['name' => null, 'strategies' => true];
 		$options += $defaults;
 		$method = ($name = $options['name']) ? static::adapter($name)->read($key, $options) : null;
-		$settings = static::_config($name);
 
 		if (!$method) {
 			foreach (array_keys(static::$_configurations) as $name) {
@@ -104,12 +106,15 @@ class Session extends \lithium\core\Adaptable {
 				return null;
 			}
 		}
-		$filters = $settings['filters'] ?: array();
-		$result = static::_filter(__FUNCTION__, compact('key', 'options'), $method, $filters);
+		$params = compact('key', 'options');
+		$result = Filters::run(get_called_class(), __FUNCTION__, $params, $method);
 
 		if ($options['strategies']) {
-			$options += array('key' => $key, 'mode' => 'LIFO', 'class' => __CLASS__);
-			return static::applyStrategies(__FUNCTION__, $name, $result, $options);
+			return static::applyStrategies(__FUNCTION__, $name, $result, $options + [
+				'mode' => 'LIFO',
+				'key' => $key,
+				'class' => __CLASS__
+			]);
 		}
 		return $result;
 	}
@@ -125,19 +130,19 @@ class Session extends \lithium\core\Adaptable {
 	 *              - `'strategies'` _boolean_: Indicates whether or not a configuration's applied
 	 *                strategy classes should be enabled for this operation. Defaults to `true`.
 	 * @return boolean Returns `true` on successful write, `false` otherwise.
-	 * @filter This method may be filtered.
+	 * @filter
 	 */
-	public static function write($key, $value = null, array $options = array()) {
-		$defaults = array('name' => null, 'strategies' => true);
+	public static function write($key, $value = null, array $options = []) {
+		$defaults = ['name' => null, 'strategies' => true];
 		$options += $defaults;
 
 		if (is_resource($value) || !static::$_configurations) {
 			return false;
 		}
-		$methods = array();
+		$methods = [];
 
 		if ($name = $options['name']) {
-			$methods = array($name => static::adapter($name)->write($key, $value, $options));
+			$methods = [$name => static::adapter($name)->write($key, $value, $options)];
 		} else {
 			foreach (array_keys(static::$_configurations) as $name) {
 				if ($method = static::adapter($name)->write($key, $value, $options)) {
@@ -146,18 +151,17 @@ class Session extends \lithium\core\Adaptable {
 			}
 		}
 		$result = false;
-
 		$original = $value;
 
 		foreach ($methods as $name => $method) {
-			$settings = static::_config($name);
-			$filters = $settings['filters'];
 			if ($options['strategies']) {
-				$options += array('key' => $key, 'class' => __CLASS__);
-				$value = static::applyStrategies(__FUNCTION__, $name, $original, $options);
+				$value = static::applyStrategies(__FUNCTION__, $name, $original, $options + [
+					'key' => $key,
+					'class' => __CLASS__
+				]);
 			}
 			$params = compact('key', 'value', 'options');
-			$result = static::_filter(__FUNCTION__, $params, $method, $filters) || $result;
+			$result = Filters::run(get_called_class(), __FUNCTION__, $params, $method) || $result;
 		}
 		return $result;
 	}
@@ -173,16 +177,16 @@ class Session extends \lithium\core\Adaptable {
 	 *              - `'strategies'` _boolean_: Indicates whether or not a configuration's applied
 	 *                strategy classes should be enabled for this operation. Defaults to `true`.
 	 * @return boolean Returns `true` on successful delete, or `false` on failure.
-	 * @filter This method may be filtered.
+	 * @filter
 	 */
-	public static function delete($key, array $options = array()) {
-		$defaults = array('name' => null, 'strategies' => true);
+	public static function delete($key, array $options = []) {
+		$defaults = ['name' => null, 'strategies' => true];
 		$options += $defaults;
 
-		$methods = array();
+		$methods = [];
 
 		if ($name = $options['name']) {
-			$methods = array($name => static::adapter($name)->delete($key, $options));
+			$methods = [$name => static::adapter($name)->delete($key, $options)];
 		} else {
 			foreach (static::$_configurations as $name => $config) {
 				if ($method = static::adapter($name)->delete($key, $options)) {
@@ -191,18 +195,17 @@ class Session extends \lithium\core\Adaptable {
 			}
 		}
 		$result = false;
-		$options += array('key' => $key, 'class' => __CLASS__);
 		$original = $key;
 
 		foreach ($methods as $name => $method) {
-			$settings = static::_config($name);
 			if ($options['strategies']) {
-				$options += array('key' => $key, 'class' => __CLASS__);
-				$key = static::applyStrategies(__FUNCTION__, $name, $original, $options);
+				$key = static::applyStrategies(__FUNCTION__, $name, $original, $options + [
+					'key' => $key,
+					'class' => __CLASS__
+				]);
 			}
 			$params = compact('key', 'options');
-			$filters = $settings['filters'];
-			$result = static::_filter(__FUNCTION__, $params, $method, $filters) || $result;
+			$result = Filters::run(get_called_class(), __FUNCTION__, $params, $method) || $result;
 		}
 		return $result;
 	}
@@ -218,13 +221,13 @@ class Session extends \lithium\core\Adaptable {
 	 *                strategy classes should be enabled for this operation. Defaults to `true`.
 	 * @filter
 	 */
-	public static function clear(array $options = array()) {
-		$defaults = array('name' => null, 'strategies' => true);
+	public static function clear(array $options = []) {
+		$defaults = ['name' => null, 'strategies' => true];
 		$options += $defaults;
-		$methods = array();
+		$methods = [];
 
 		if ($name = $options['name']) {
-			$methods = array($name => static::adapter($name)->clear($options));
+			$methods = [$name => static::adapter($name)->clear($options)];
 		} else {
 			foreach (static::$_configurations as $name => $config) {
 				if ($method = static::adapter($name)->clear($options)) {
@@ -236,12 +239,10 @@ class Session extends \lithium\core\Adaptable {
 		$result = false;
 
 		foreach ($methods as $name => $method) {
-			$settings = static::_config($name);
-			$filters = $settings['filters'];
-			$result = static::_filter(__FUNCTION__, $params, $method, $filters) || $result;
+			$result = Filters::run(get_called_class(), __FUNCTION__, $params, $method) || $result;
 		}
 		if ($options['strategies']) {
-			$options += array('mode' => 'LIFO', 'class' => __CLASS__);
+			$options += ['mode' => 'LIFO', 'class' => __CLASS__];
 			return static::applyStrategies(__FUNCTION__, $name, $result, $options);
 		}
 		return $result;
@@ -254,15 +255,15 @@ class Session extends \lithium\core\Adaptable {
 	 * @param string $key The session key to check.
 	 * @param array $options Optional parameters that this method accepts.
 	 * @return boolean
-	 * @filter This method may be filtered.
+	 * @filter
 	 */
-	public static function check($key, array $options = array()) {
-		$defaults = array('name' => null, 'strategies' => true);
+	public static function check($key, array $options = []) {
+		$defaults = ['name' => null, 'strategies' => true];
 		$options += $defaults;
-		$methods = array();
+		$methods = [];
 
 		if ($name = $options['name']) {
-			$methods = array($name => static::adapter($name)->check($key, $options));
+			$methods = [$name => static::adapter($name)->check($key, $options)];
 		} else {
 			foreach (static::$_configurations as $name => $config) {
 				if ($method = static::adapter($name)->check($key, $options)) {
@@ -274,13 +275,14 @@ class Session extends \lithium\core\Adaptable {
 		$result = false;
 
 		foreach ($methods as $name => $method) {
-			$settings = static::_config($name);
-			$filters = $settings['filters'];
-			$result = static::_filter(__FUNCTION__, $params, $method, $filters) || $result;
+			$result = Filters::run(get_called_class(), __FUNCTION__, $params, $method) || $result;
 		}
 		if ($options['strategies']) {
-			$options += array('key' => $key, 'mode' => 'LIFO', 'class' => __CLASS__);
-			return static::applyStrategies(__FUNCTION__, $name, $result, $options);
+			return static::applyStrategies(__FUNCTION__, $name, $result, $options + [
+				'mode' => 'LIFO',
+				'key' => $key,
+				'class' => __CLASS__
+			]);
 		}
 		return $result;
 	}
