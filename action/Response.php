@@ -84,6 +84,22 @@ class Response extends \lithium\net\http\Response {
 	}
 
 	/**
+	 * Expands on `\net\http\Message::headers()` with some magic conversions for shorthand headers.
+	 *
+	 * @param string $key
+	 * @param string $value
+	 * @param boolean $replace
+	 * @return mixed
+	 */
+	public function headers($key = null, $value = null, $replace = true) {
+		if (is_string($key) && strtolower($key) == 'download') {
+			$key = 'Content-Disposition';
+			$value = 'attachment; filename="' . $value . '"';
+		}
+		return parent::headers($key, $value, $replace);
+	}
+
+	/**
 	 * Controls how or whether the client browser and web proxies should cache this response.
 	 *
 	 * @param mixed $expires This can be a Unix timestamp indicating when the page expires, or a
