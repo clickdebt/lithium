@@ -1,14 +1,13 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2012, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\analysis\logger\adapter;
-
-use Closure;
 
 /**
  * The Syslog adapter facilitates logging messages to a `syslogd` backend. See the constructor for
@@ -16,7 +15,7 @@ use Closure;
  *
  * @see lithium\analysis\logger\adapter\Syslog::__construct()
  */
-class Syslog extends \lithium\core\Object {
+class Syslog extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * Flag indicating whether or not the connection to `syslogd` has been opened yet.
@@ -30,7 +29,7 @@ class Syslog extends \lithium\core\Object {
 	 *
 	 * @var array
 	 */
-	protected $_priorities = array(
+	protected $_priorities = [
 		'emergency' => LOG_EMERG,
 		'alert'     => LOG_ALERT,
 		'critical'  => LOG_CRIT,
@@ -39,25 +38,26 @@ class Syslog extends \lithium\core\Object {
 		'notice'    => LOG_NOTICE,
 		'info'      => LOG_INFO,
 		'debug'     => LOG_DEBUG
-	);
+	];
 
 	/**
-	 * Class constructor. Configures the `Syslog` adapter instance with the default settings. For
-	 * more information on these settings, see the documentation for
-	 * [the `openlog()` function](http://php.net/openlog).
+	 * Constructor. Configures the `Syslog` adapter instance with the default settings. For
+	 * more information on these settings, see the documentation for tthe `openlog()` function.
 	 *
+	 * @link http://php.net/openlog
 	 * @param array $config Available configuration settings for this adapter:
-	 *              - `'identity'` _string_: The identity string to be attached to each message in
-	 *                the system log. This is usually a string that meaningfully identifies your
-	 *                application. Defaults to `false`.
-	 *              - `'options'` _integer_: The flags to use when opening the log. Defaults to
-	 *                `LOG_ODELAY`.
-	 *              - `'facility'` _integer_: A flag specifying the program to use to log the
-	 *                messages. See the `openlog()` documentation for more information. Defaults to
-	 *                `LOG_USER`.
+	 *        - `'identity'` _string_: The identity string to be attached to each message in
+	 *          the system log. This is usually a string that meaningfully identifies your
+	 *          application. Defaults to `false`.
+	 *        - `'options'` _integer_: The flags to use when opening the log. Defaults to
+	 *          `LOG_ODELAY`.
+	 *        - `'facility'` _integer_: A flag specifying the program to use to log the
+	 *          messages. See the `openlog()` documentation for more information. Defaults to
+	 *          `LOG_USER`.
+	 * @return void
 	 */
-	public function __construct(array $config = array()) {
-		$defaults = array('identity' => false, 'options'  => LOG_ODELAY, 'facility' => LOG_USER);
+	public function __construct(array $config = []) {
+		$defaults = ['identity' => false, 'options'  => LOG_ODELAY, 'facility' => LOG_USER];
 		parent::__construct($config + $defaults);
 	}
 
@@ -66,11 +66,10 @@ class Syslog extends \lithium\core\Object {
 	 *
 	 * @param string $priority The message priority string. Maps to a `syslogd` priority constant.
 	 * @param string $message The message to write.
-	 * @return Closure Function returning boolean `true` on successful write, `false` otherwise.
+	 * @return \Closure Function returning boolean `true` on successful write, `false` otherwise.
 	 */
 	public function write($priority, $message) {
 		$config = $this->_config;
-		$_priorities = $this->_priorities;
 
 		if (!$this->_isConnected) {
 			closelog();
@@ -78,8 +77,8 @@ class Syslog extends \lithium\core\Object {
 			$this->_isConnected = true;
 		}
 
-		return function($self, $params) use ($_priorities) {
-			$priority = $_priorities[$params['priority']];
+		return function($params) {
+			$priority = $this->_priorities[$params['priority']];
 			return syslog($priority, $params['message']);
 		};
 	}

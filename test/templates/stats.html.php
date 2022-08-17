@@ -1,9 +1,16 @@
 <?php
+/**
+ * li₃: the most RAD framework for PHP (http://li3.me)
+ *
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
+ */
 
-$passes = intval($count['passes']) ?: 0;
-$asserts = intval($count['asserts']) ?: 0;
-$fails = intval($count['fails']) ?: 0;
-$exceptions = intval($count['exceptions']) ?: 0;
+$passes = (integer) $count['passes'] ?: 0;
+$asserts = (integer) $count['asserts'] ?: 0;
+$fails = (integer) $count['fails'] ?: 0;
+$exceptions = (integer) $count['exceptions'] ?: 0;
 
 ?>
 <div class="test-result test-result-<?php echo ($success ? 'success' : 'fail') ?>">
@@ -15,7 +22,7 @@ $exceptions = intval($count['exceptions']) ?: 0;
 
 <?php foreach ((array) $stats['errors'] as $error): ?>
 	<?php if ($error['result'] == 'fail' || $error['result'] == 'exception'): ?>
-		<?php echo $self->render("{$error['result']}", compact('error')); ?>
+		<?php echo $this->render("{$error['result']}", compact('error')); ?>
 	<?php endif ?>
 <?php endforeach ?>
 

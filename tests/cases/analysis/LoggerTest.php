@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\cases\analysis;
@@ -21,7 +22,7 @@ class LoggerTest extends \lithium\test\Unit {
 		$path = Libraries::get(true, 'resources');
 
 		if (is_writable($path)) {
-			foreach (array("{$path}/tmp/tests", "{$path}/tmp/logs") as $dir) {
+			foreach (["{$path}/tmp/tests", "{$path}/tmp/logs"] as $dir) {
 				if (!is_dir($dir)) {
 					mkdir($dir, 0777, true);
 				}
@@ -32,7 +33,7 @@ class LoggerTest extends \lithium\test\Unit {
 	}
 
 	public function setUp() {
-		Logger::config(array('default' => array('adapter' => new MockLoggerAdapter())));
+		Logger::config(['default' => ['adapter' => new MockLoggerAdapter()]]);
 	}
 
 	public function tearDown() {
@@ -41,20 +42,20 @@ class LoggerTest extends \lithium\test\Unit {
 
 	public function testConfig() {
 		$test = new MockLoggerAdapter();
-		$config = array('logger' => array('adapter' => $test, 'filters' => array()));
+		$config = ['logger' => ['adapter' => $test, 'filters' => []]];
 
 		$result = Logger::config($config);
 		$this->assertNull($result);
 
 		$result = Logger::config();
-		$config['logger'] += array('priority' => true);
+		$config['logger'] += ['priority' => true];
 		$expected = $config;
 		$this->assertEqual($expected, $result);
 	}
 
 	public function testReset() {
 		$test = new MockLoggerAdapter();
-		$config = array('logger' => array('adapter' => $test, 'filters' => array()));
+		$config = ['logger' => ['adapter' => $test, 'filters' => []]];
 
 		$result = Logger::config($config);
 
@@ -76,9 +77,9 @@ class LoggerTest extends \lithium\test\Unit {
 		$base = Libraries::get(true, 'resources') . '/tmp/logs';
 		$this->skipIf(!is_writable($base), "Path `{$base}` is not writable.");
 
-		$config = array('default' => array(
+		$config = ['default' => [
 			'adapter' => 'File', 'timestamp' => false, 'format' => "{:message}\n"
-		));
+		]];
 		Logger::config($config);
 
 		$result = Logger::write('info', 'Message line 1');
@@ -99,27 +100,28 @@ class LoggerTest extends \lithium\test\Unit {
 	}
 
 	public function testWriteWithInvalidPriority() {
-		$this->expectException("Attempted to write log message with invalid priority `foo`.");
-		Logger::foo("Test message");
+		$this->assertException("Attempted to write log message with invalid priority `foo`.", function() {
+			Logger::foo("Test message");
+		});
 	}
 
 	public function testWriteByName() {
 		$base = Libraries::get(true, 'resources') . '/tmp/logs';
 		$this->skipIf(!is_writable($base), "Path `{$base}` is not writable.");
 
-		Logger::config(array('default' => array(
+		Logger::config(['default' => [
 			'adapter' => 'File',
 			'timestamp' => false,
 			'priority' => false,
 			'format' => "{:message}\n"
-		)));
+		]]);
 
 		$this->assertFileNotExists($base . '/info.log');
 
 		$this->assertEmpty(Logger::write('info', 'Message line 1'));
 		$this->assertFileNotExists($base . '/info.log');
 
-		$this->assertNotEmpty(Logger::write(null, 'Message line 1', array('name' => 'default')));
+		$this->assertNotEmpty(Logger::write(null, 'Message line 1', ['name' => 'default']));
 
 		$expected = "Message line 1\n";
 		$result = file_get_contents($base . '/.log');
@@ -132,26 +134,26 @@ class LoggerTest extends \lithium\test\Unit {
 		$base = Libraries::get(true, 'resources') . '/tmp/logs';
 		$this->skipIf(!is_writable($base), "Path `{$base}` is not writable.");
 
-		Logger::config(array(
-			'default' => array(
+		Logger::config([
+			'default' => [
 				'adapter' => 'File',
 				'file' => function($data, $config) { return "{$data['priority']}_default.log"; },
 				'timestamp' => false,
 				'format' => "{:message}\n"
-			),
-			'secondary' => array(
+			],
+			'secondary' => [
 				'adapter' => 'File',
 				'file' => function($data, $config) { return "{$data['priority']}_secondary.log"; },
 				'timestamp' => false,
 				'format' => "{:message}\n"
-			),
-		));
+			],
+		]);
 
 		$this->assertFileNotExists($base . '/info_default.log');
 
-		$this->assertNotEmpty(Logger::write('info', 'Default Message line 1', array(
+		$this->assertNotEmpty(Logger::write('info', 'Default Message line 1', [
 			'name' => 'default'
-		)));
+		]));
 
 		$this->assertFileExists($base . '/info_default.log');
 
@@ -167,26 +169,26 @@ class LoggerTest extends \lithium\test\Unit {
 		$base = Libraries::get(true, 'resources') . '/tmp/logs';
 		$this->skipIf(!is_writable($base), "Path `{$base}` is not writable.");
 
-		Logger::config(array(
-			'default' => array(
+		Logger::config([
+			'default' => [
 				'adapter' => 'File',
 				'file' => function($data, $config) { return "{$data['priority']}_default.log"; },
 				'timestamp' => false,
 				'format' => "{:message}\n"
-			),
-			'secondary' => array(
+			],
+			'secondary' => [
 				'adapter' => 'File',
 				'file' => function($data, $config) { return "{$data['priority']}_secondary.log"; },
 				'timestamp' => false,
 				'format' => "{:message}\n"
-			),
-		));
+			],
+		]);
 
 		$this->assertFileNotExists($base . '/info_secondary.log');
 
-		$this->assertNotEmpty(Logger::write('info', 'Secondary Message line 1', array(
+		$this->assertNotEmpty(Logger::write('info', 'Secondary Message line 1', [
 			'name' => 'secondary'
-		)));
+		]));
 
 		$this->assertFileExists($base . '/info_secondary.log');
 
@@ -197,18 +199,6 @@ class LoggerTest extends \lithium\test\Unit {
 		unlink($base . '/info_secondary.log');
 
 	}
-
-	public function testRespondsToParentCall() {
-		$this->assertTrue(Logger::respondsTo('applyFilter'));
-		$this->assertFalse(Logger::respondsTo('fooBarBaz'));
-	}
-
-	public function testRespondsToMagic() {
-		$this->assertTrue(Logger::respondsTo('emergency'));
-		$this->assertTrue(Logger::respondsTo('debug'));
-		$this->assertFalse(Logger::respondsTo('foobar'));
-	}
-
 }
 
 ?>

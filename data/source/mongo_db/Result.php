@@ -1,40 +1,53 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\data\source\mongo_db;
 
-use MongoGridFSFile;
+use IteratorIterator;
 
+/**
+ * This is the result class for all MongoDB. It needs a `MongoCursor` as
+ * a resource to operate on.
+ *
+ * @link http://php.net/manual/en/class.mongocursor.php
+ */
 class Result extends \lithium\data\source\Result {
 
-	public function prev() {
-		return null;
-	}
-
-	protected function _fetchFromCache() {
-		return null;
-	}
+	/**
+	 * internal (sub)iterator
+	 *
+	 * @var IteratorIterator
+	 */
+	protected $_subIterator = null;
 
 	/**
-	 * Fetches the result from the resource and caches it.
+	 * Fetches the next result from the resource.
 	 *
-	 * @return boolean Return `true` on success or `false` if it is not valid.
+	 * @return array|boolean|null Returns a key/value pair for the next result,
+	 *         `null` if there is none, `false` if something bad happened.
 	 */
-	protected function _fetchFromResource() {
-		if ($this->_resource && $this->_resource->hasNext()) {
-			$result = $this->_resource->getNext();
-			$isFile = ($result instanceof MongoGridFSFile);
-			$result = $isFile ? array('file' => $result) + $result->file : $result;
-			$this->_key = $this->_iterator;
-			$this->_current = $result;
-			return true;
+	protected function _fetch() {
+		if (!$this->_resource) {
+			return false;
 		}
-		return false;
+		if (!$this->_subIterator) {
+			$this->_resource->setTypeMap(['root' => 'array', 'document' => 'array']);
+			$this->_subIterator = new IteratorIterator($this->_resource);
+			$this->_subIterator->rewind();
+		}
+		if (!$this->_subIterator->valid()) {
+			return;
+		}
+		$result = $this->_subIterator->current();
+		$this->_subIterator->next();
+
+		return [$this->_iterator, $result];
 	}
 }
 

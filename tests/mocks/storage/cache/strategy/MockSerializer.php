@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\mocks\storage\cache\strategy;
@@ -12,13 +13,13 @@ namespace lithium\tests\mocks\storage\cache\strategy;
  * Mock strategy.
  * Simulates the 'Serializer' strategy.
  */
-class MockSerializer extends \lithium\core\Object {
+class MockSerializer extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * Write strategy method.
 	 * Serializes the passed data.
 	 *
-	 * @link http://php.net/manual/en/function.serialize.php PHP Manual: serialize()
+	 * @link http://php.net/function.serialize.php PHP Manual: serialize()
 	 * @param mixed $data The data to be serialized.
 	 * @return string Serialized data.
 	 */
@@ -30,7 +31,7 @@ class MockSerializer extends \lithium\core\Object {
 	 * Read strategy method.
 	 * Unserializes the passed data.
 	 *
-	 * @link http://php.net/manual/en/function.unserialize.php PHP Manual: unserialize()
+	 * @link http://php.net/function.unserialize.php PHP Manual: unserialize()
 	 * @param string $data Serialized data.
 	 * @return mixed Result of unserialization.
 	 */

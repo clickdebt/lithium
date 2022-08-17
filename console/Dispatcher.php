@@ -1,15 +1,17 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\console;
 
 use lithium\core\Libraries;
 use lithium\core\Environment;
+use lithium\aop\Filters;
 use UnexpectedValueException;
 
 /**
@@ -22,7 +24,7 @@ use UnexpectedValueException;
  * parameters passed to the script. `Dispatcher` then invokes `lithium\console\Router` to determine
  * the correct `Command` class to invoke, and which method should be called.
  */
-class Dispatcher extends \lithium\core\StaticObject {
+class Dispatcher extends \lithium\core\StaticObjectDeprecated {
 
 	/**
 	 * Fully-namespaced router class reference.
@@ -33,10 +35,10 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 * @see lithium\console\Router::parse()
 	 * @var array
 	 */
-	protected static $_classes = array(
+	protected static $_classes = [
 		'request' => 'lithium\console\Request',
 		'router' => 'lithium\console\Router'
-	);
+	];
 
 	/**
 	 * Contains pre-process format strings for changing Dispatcher's behavior based on 'rules'.
@@ -45,16 +47,16 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 * not empty) in a route, (i.e. the result of `lithium\console\Router::parse()`) then the rule's
 	 * value will be applied to the route before it is dispatched.  When applying a rule, any array
 	 * elements array elements of the flag which are present in the route will be modified using a
-	 * `lithium\util\String::insert()`-formatted string.
+	 * `lithium\util\Text::insert()`-formatted string.
 	 *
 	 * @see lithium\console\Dispatcher::config()
-	 * @see lithium\util\String::insert()
+	 * @see lithium\util\Text::insert()
 	 * @var array
 	 */
-	protected static $_rules = array(
-		'command' => array(array('lithium\util\Inflector', 'camelize')),
-		'action' => array(array('lithium\util\Inflector', 'camelize', array(false)))
-	);
+	protected static $_rules = [
+		'command' => [['lithium\util\Inflector', 'camelize']],
+		'action' => [['lithium\util\Inflector', 'camelize', [false]]]
+	];
 
 	/**
 	 * Used to set configuration parameters for the Dispatcher.
@@ -63,9 +65,9 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 * @return array If no parameters are passed, returns an associative array with the
 	 *         current configuration, otherwise returns null.
 	 */
-	public static function config($config = array()) {
+	public static function config($config = []) {
 		if (!$config) {
-			return array('rules' => static::$_rules);
+			return ['rules' => static::$_rules];
 		}
 		foreach ($config as $key => $val) {
 			if (isset(static::${'_' . $key})) {
@@ -84,26 +86,29 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 *        `null`, an instance will be created.
 	 * @param array $options
 	 * @return object The command action result which is an instance of `lithium\console\Response`.
+	 * @filter Allows to execute very early or very late in the command request.
 	 */
-	public static function run($request = null, $options = array()) {
-		$defaults = array('request' => array());
+	public static function run($request = null, $options = []) {
+		$defaults = ['request' => []];
 		$options += $defaults;
-		$classes = static::$_classes;
 		$params = compact('request', 'options');
 
-		return static::_filter(__FUNCTION__, $params, function($self, $params) use ($classes) {
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
+			$classes = static::$_classes;
+
 			$request = $params['request'];
 			$options = $params['options'];
 			$router = $classes['router'];
+
 			$request = $request ?: new $classes['request']($options['request']);
 			$request->params = $router::parse($request);
-			$params = $self::applyRules($request->params);
+			$params = static::applyRules($request->params);
 			Environment::set($request);
 			try {
-				$callable = $self::invokeMethod('_callable', array($request, $params, $options));
-				return $self::invokeMethod('_call', array($callable, $request, $params));
+				$callable = static::_callable($request, $params, $options);
+				return static::_call($callable, $request, $params);
 			} catch (UnexpectedValueException $e) {
-				return (object) array('status' => $e->getMessage() . "\n");
+				return (object) ['status' => $e->getMessage() . "\n"];
 			}
 		});
 	}
@@ -115,10 +120,11 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 * @param array $params Request params that can be accessed inside the filter.
 	 * @param array $options
 	 * @return class lithium\console\Command Returns the instantiated command object.
+	 * @filter
 	 */
 	protected static function _callable($request, $params, $options) {
 		$params = compact('request', 'params', 'options');
-		return static::_filter(__FUNCTION__, $params, function($self, $params) {
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
 			$request = $params['request'];
 			$params = $params['params'];
 			$name = $params['command'];
@@ -145,7 +151,7 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 * @return array Returns the `$params` array with formatting rules applied to array values.
 	 */
 	public static function applyRules($params) {
-		$result = array();
+		$result = [];
 
 		if (!$params) {
 			return false;
@@ -155,9 +161,9 @@ class Dispatcher extends \lithium\core\StaticObject {
 			foreach ($rules as $rule) {
 				if (!empty($params[$name]) && isset($rule[0])) {
 					$options = array_merge(
-						array($params[$name]), isset($rule[2]) ? (array) $rule[2] : array()
+						[$params[$name]], isset($rule[2]) ? (array) $rule[2] : []
 					);
-					$result[$name] = call_user_func_array(array($rule[0], $rule[1]), $options);
+					$result[$name] = call_user_func_array([$rule[0], $rule[1]], $options);
 				}
 			}
 		}
@@ -173,10 +179,11 @@ class Dispatcher extends \lithium\core\StaticObject {
 	 * @param string $request The associated `Request` object.
 	 * @param string $params Additional params that should be passed along.
 	 * @return mixed Returns the result of the called action, typically `true` or `false`.
+	 * @filter
 	 */
 	protected static function _call($callable, $request, $params) {
 		$params = compact('callable', 'request', 'params');
-		return static::_filter(__FUNCTION__, $params, function($self, $params) {
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
 			if (is_callable($callable = $params['callable'])) {
 				$request = $params['request'];
 				$params = $params['params'];

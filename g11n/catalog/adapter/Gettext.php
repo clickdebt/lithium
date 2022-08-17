@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\g11n\catalog\adapter;
@@ -22,7 +23,7 @@ use lithium\core\Libraries;
  * the standard gettext directory structure with a few slight adjustments to the way
  * templates are being named.
  *
- * {{{
+ * ```asciiart
  * resources/g11n/po
  * ├── <locale>
  * |   ├── LC_MESSAGES
@@ -40,7 +41,7 @@ use lithium\core\Libraries;
  * ├── validation_default.pot
  * ├── validation_<scope>.pot
  * └── ...
- * }}}
+ * ```
  *
  * @see lithium\g11n\Locale
  * @link http://php.net/setlocale PHP Manual: setlocale()
@@ -79,9 +80,10 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 	 *
 	 * @param array $config Available configuration options are:
 	 *        - `'path'`: The path to the directory holding the data.
+	 * @return void
 	 */
-	public function __construct(array $config = array()) {
-		$defaults = array('path' => null);
+	public function __construct(array $config = []) {
+		$defaults = ['path' => null];
 		parent::__construct($config + $defaults);
 	}
 
@@ -102,6 +104,9 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 	/**
 	 * Reads data.
 	 *
+	 * MO files are preferred over PO files when existent.
+	 *
+	 * @see lithium\g11n\catalog\adapter\Gettext::_files()
 	 * @param string $category A category.
 	 * @param string $locale A locale identifier.
 	 * @param string $scope The scope for the current operation.
@@ -117,16 +122,16 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 				continue;
 			}
 			$stream = fopen($file, 'rb');
-			$data = $this->invokeMethod($method, array($stream));
+			$data = $this->{$method}($stream);
 			fclose($stream);
 
 			if ($data) {
-				$data['pluralRule'] = array(
+				$data['pluralRule'] = [
 					'id' => 'pluralRule',
 					'translated' => function($count) {
 						return $count !== 1;
 					}
-				);
+				];
 				return $data;
 			}
 		}
@@ -150,7 +155,7 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 			if (!$stream = fopen($file, 'wb')) {
 				return false;
 			}
-			$this->invokeMethod($method, array($stream, $data));
+			$this->{$method}($stream, $data);
 			fclose($stream);
 		}
 		return true;
@@ -170,7 +175,7 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 
 		if (($pos = strpos($category, 'Template')) !== false) {
 			$category = substr($category, 0, $pos);
-			return array("{$path}/{$category}_{$scope}.pot");
+			return ["{$path}/{$category}_{$scope}.pot"];
 		}
 
 		if ($category === 'message') {
@@ -178,10 +183,10 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 		}
 		$category = strtoupper($category);
 
-		return array(
+		return [
 			"{$path}/{$locale}/LC_{$category}/{$scope}.mo",
 			"{$path}/{$locale}/LC_{$category}/{$scope}.po"
-		);
+		];
 	}
 
 	/**
@@ -199,14 +204,15 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 	 * @return array
 	 */
 	protected function _parsePo($stream) {
-		$defaults = array(
-			'ids' => array(),
+		$defaults = [
+			'ids' => [],
 			'translated' => null,
-			'flags' => array(),
-			'comments' => array(),
-			'occurrences' => array()
-		);
-		$data = array();
+			'flags' => [],
+			'comments' => [],
+			'occurrences' => [],
+			'context' => null
+		];
+		$data = [];
 		$item = $defaults;
 
 		while ($line = fgets($stream)) {
@@ -220,10 +226,10 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 			} elseif (substr($line, 0, 3) === '#, ') {
 				$item['flags'][substr($line, 3)] = true;
 			} elseif (substr($line, 0, 3) === '#: ') {
-				$item['occurrences'][] = array(
+				$item['occurrences'][] = [
 					'file' => strtok(substr($line, 3), ':'),
 					'line' => strtok(':')
-				);
+				];
 			} elseif (substr($line, 0, 3) === '#. ') {
 				$item['comments'][] = substr($line, 3);
 			} elseif ($line[0] === '#') {
@@ -266,6 +272,7 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 	 * Parses machine object (MO) format, independent of the machine's endian it
 	 * was created on. Both 32bit and 64bit systems are supported.
 	 *
+	 * @link https://www.gnu.org/software/gettext/manual/html_node/MO-Files.html
 	 * @param resource $stream
 	 * @return array
 	 * @throws RangeException If stream content has an invalid format.
@@ -273,37 +280,38 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 	protected function _parseMo($stream) {
 		$stat = fstat($stream);
 
-		if ($stat['size'] < self::MO_HEADER_SIZE) {
+		if ($stat['size'] < static::MO_HEADER_SIZE) {
 			throw new RangeException("MO stream content has an invalid format.");
 		}
 		$magic = unpack('V1', fread($stream, 4));
 		$magic = hexdec(substr(dechex(current($magic)), -8));
 
-		if ($magic == self::MO_LITTLE_ENDIAN_MAGIC) {
+		if ($magic == static::MO_LITTLE_ENDIAN_MAGIC) {
 			$isBigEndian = false;
-		} elseif ($magic == self::MO_BIG_ENDIAN_MAGIC) {
+		} elseif ($magic == static::MO_BIG_ENDIAN_MAGIC) {
 			$isBigEndian = true;
 		} else {
 			throw new RangeException("MO stream content has an invalid format.");
 		}
 
-		$header = array(
+		$header = [
 			'formatRevision' => null,
 			'count' => null,
 			'offsetId' => null,
 			'offsetTranslated' => null,
 			'sizeHashes' => null,
 			'offsetHashes' => null
-		);
+		];
 		foreach ($header as &$value) {
 			$value = $this->_readLong($stream, $isBigEndian);
 		}
 		extract($header);
-		$data = array();
+		$data = [];
 
 		for ($i = 0; $i < $count; $i++) {
 			$singularId = $pluralId = null;
 			$translated = null;
+			$context = null;
 
 			fseek($stream, $offsetId + $i * 8);
 
@@ -321,6 +329,10 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 				list($singularId, $pluralId) = explode("\000", $singularId);
 			}
 
+			if (strpos($singularId, "\004") !== false) {
+				list($context, $singularId) = explode("\004", $singularId);
+			}
+
 			fseek($stream, $offsetTranslated + $i * 8);
 			$length = $this->_readLong($stream, $isBigEndian);
 			$offset = $this->_readLong($stream, $isBigEndian);
@@ -332,8 +344,8 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 				$translated = explode("\000", $translated);
 			}
 
-			$ids = array('singular' => $singularId, 'plural' => $pluralId);
-			$data = $this->_merge($data, compact('ids', 'translated'));
+			$ids = ['singular' => $singularId, 'plural' => $pluralId];
+			$data = $this->_merge($data, compact('ids', 'translated', 'context'));
 		}
 		return $data;
 	}
@@ -369,6 +381,7 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 	protected function _compilePo($stream, array $data) {
 		$output[] = '# This file is distributed under the same license as the PACKAGE package.';
 		$output[] = '#';
+		$output[] = 'msgctxt ""';
 		$output[] = 'msgid ""';
 		$output[] = 'msgstr ""';
 		$output[] = '"Project-Id-Version: PACKAGE VERSION\n"';
@@ -385,7 +398,7 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 		fwrite($stream, $output);
 
 		foreach ($data as $key => $item) {
-			$output = array();
+			$output = [];
 			$item = $this->_prepareForWrite($item);
 
 			foreach ($item['occurrences'] as $occurrence) {
@@ -397,12 +410,16 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 			foreach ($item['flags'] as $flag => $value) {
 				$output[] = "#, {$flag}";
 			}
+
+			if (isset($item['context'])) {
+				$output[] = "msgctxt \"{$item['context']}\"";
+			}
 			$output[] = "msgid \"{$item['ids']['singular']}\"";
 
 			if (isset($item['ids']['plural'])) {
 				$output[] = "msgid_plural \"{$item['ids']['plural']}\"";
 
-				foreach ((array) $item['translated'] ?: array(null, null) as $key => $value) {
+				foreach ((array) $item['translated'] ?: [null, null] as $key => $value) {
 					$output[] = "msgstr[{$key}] \"{$value}\"";
 				}
 			} else {
@@ -459,11 +476,11 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 			if (is_array($value)) {
 				return array_map($filter, $value);
 			}
-			$value = strtr($value, array("\\'" => "'", "\\\\" => "\\", "\r\n" => "\n"));
+			$value = strtr($value, ["\\'" => "'", "\\\\" => "\\", "\r\n" => "\n"]);
 			$value = addcslashes($value, "\0..\37\\\"");
 			return $value;
 		};
-		$fields = array('id', 'ids', 'translated');
+		$fields = ['id', 'ids', 'translated', 'context'];
 
 		foreach ($fields as $field) {
 			if (isset($item[$field])) {
@@ -501,7 +518,7 @@ class Gettext extends \lithium\g11n\catalog\Adapter {
 			}
 			return stripcslashes($value);
 		};
-		$fields = array('id', 'ids', 'translated');
+		$fields = ['id', 'ids', 'translated', 'context'];
 
 		foreach ($fields as $field) {
 			if (isset($item[$field])) {

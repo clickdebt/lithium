@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\net\http;
@@ -15,7 +16,7 @@ use lithium\core\ClassNotFoundException;
  * Basic Http Service.
  *
  */
-class Service extends \lithium\core\Object {
+class Service extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * The `Socket` instance used to send `Service` calls.
@@ -36,14 +37,14 @@ class Service extends \lithium\core\Object {
 	 *
 	 * @var array
 	 */
-	protected $_autoConfig = array('classes' => 'merge', 'responseTypes');
+	protected $_autoConfig = ['classes' => 'merge', 'responseTypes'];
 
 	/**
 	 * Array of closures that return various pieces of information about an HTTP response.
 	 *
 	 * @var array
 	 */
-	protected $_responseTypes = array();
+	protected $_responseTypes = [];
 
 	/**
 	 * Indicates whether `Service` can connect to the HTTP endpoint for which it is configured.
@@ -58,20 +59,31 @@ class Service extends \lithium\core\Object {
 	 *
 	 * @var array
 	 */
-	protected $_classes = array(
+	protected $_classes = [
 		'media'    => 'lithium\net\http\Media',
 		'request'  => 'lithium\net\http\Request',
 		'response' => 'lithium\net\http\Response'
-	);
+	];
 
 	/**
-	 * Initializes a new `Service` instance with the default HTTP request settings and
-	 * transport- and format-handling classes.
+	 * Constructor. Initializes a new `Service` instance with the default HTTP request settings
+	 * and transport- and format-handling classes.
 	 *
-	 * @param array $config
+	 * @param array $config Available configuration options are:
+	 *        - `'persistent'` _boolean_
+	 *        - `'scheme'` _string_
+	 *        - `'host'` _string_
+	 *        - `'port'` _integer_
+	 *        - `'timeout'` _integer_
+	 *        - `'auth'` _boolean_
+	 *        - `'username'` _string_
+	 *        - `'password'` _string_
+	 *        - `'encoding'` _string_
+	 *        - `'socket'` _string_
+	 * @return void
 	 */
-	public function __construct(array $config = array()) {
-		$defaults = array(
+	public function __construct(array $config = []) {
+		$defaults = [
 			'persistent' => false,
 			'scheme'     => 'http',
 			'host'       => 'localhost',
@@ -82,27 +94,28 @@ class Service extends \lithium\core\Object {
 			'password'   => null,
 			'encoding'   => 'UTF-8',
 			'socket'     => 'Context'
-		);
+		];
 		parent::__construct($config + $defaults);
 	}
 
 	/**
-	 * Initialize connection
+	 * Initialize connection.
 	 *
+	 * @return void
 	 */
 	protected function _init() {
-		$config = array('classes' => $this->_classes) + $this->_config;
+		$config = ['classes' => $this->_classes] + $this->_config;
 
 		try {
 			$this->connection = Libraries::instance('socket', $config['socket'], $config);
 		} catch(ClassNotFoundException $e) {
 			$this->connection = null;
 		}
-		$this->_responseTypes += array(
+		$this->_responseTypes += [
 			'headers' => function($response) { return $response->headers; },
 			'body' => function($response) { return $response->body(); },
 			'code' => function($response) { return $response->status['code']; }
-		);
+		];
 	}
 
 	/**
@@ -110,21 +123,11 @@ class Service extends \lithium\core\Object {
 	 *
 	 * @param string $method
 	 * @param string $params
+	 * @return mixed
 	 */
-	public function __call($method, $params = array()) {
+	public function __call($method, $params = []) {
 		array_unshift($params, $method);
-		return $this->invokeMethod('send', $params);
-	}
-
-	/**
-	 * Custom check to determine if our given magic methods can be responded to.
-	 *
-	 * @param  string  $method     Method name.
-	 * @param  bool    $internal   Interal call or not.
-	 * @return bool
-	 */
-	public function respondsTo($method, $internal = false) {
-		return is_callable(array($this, $method), true);
+		return call_user_func_array(array($this, 'send'), $params);
 	}
 
 	/**
@@ -135,8 +138,8 @@ class Service extends \lithium\core\Object {
 	 * @param array $options
 	 * @return string
 	 */
-	public function head($path = null, $data = array(), array $options = array()) {
-		$defaults = array('return' => 'headers', 'type' => false);
+	public function head($path = null, $data = [], array $options = []) {
+		$defaults = ['return' => 'headers', 'type' => false];
 		return $this->send(__FUNCTION__, $path, $data, $options + $defaults);
 	}
 
@@ -148,8 +151,8 @@ class Service extends \lithium\core\Object {
 	 * @param array $options
 	 * @return string
 	 */
-	public function get($path = null, $data = array(), array $options = array()) {
-		$defaults = array('type' => false);
+	public function get($path = null, $data = [], array $options = []) {
+		$defaults = ['type' => false];
 		return $this->send(__FUNCTION__, $path, $data, $options + $defaults);
 	}
 
@@ -161,7 +164,7 @@ class Service extends \lithium\core\Object {
 	 * @param array $options
 	 * @return string
 	 */
-	public function post($path = null, $data = array(), array $options = array()) {
+	public function post($path = null, $data = [], array $options = []) {
 		return $this->send(__FUNCTION__, $path, $data, $options);
 	}
 
@@ -173,7 +176,7 @@ class Service extends \lithium\core\Object {
 	 * @param array $options
 	 * @return string
 	 */
-	public function put($path = null, $data = array(), array $options = array()) {
+	public function put($path = null, $data = [], array $options = []) {
 		return $this->send(__FUNCTION__, $path, $data, $options);
 	}
 
@@ -185,7 +188,7 @@ class Service extends \lithium\core\Object {
 	 * @param array $options
 	 * @return string
 	 */
-	public function patch($path = null, $data = array(), array $options = array()) {
+	public function patch($path = null, $data = [], array $options = []) {
 		return $this->send(__FUNCTION__, $path, $data, $options);
 	}
 
@@ -197,13 +200,17 @@ class Service extends \lithium\core\Object {
 	 * @param array $options
 	 * @return string
 	 */
-	public function delete($path = null, $data = array(), array $options = array()) {
-		$defaults = array('type' => false);
+	public function delete($path = null, $data = [], array $options = []) {
+		$defaults = ['type' => false];
 		return $this->send(__FUNCTION__, $path, $data, $options + $defaults);
 	}
 
 	/**
-	 * Send request and return response data.
+	 * Send request and return response data. Will open the connection if
+	 * needed and always close it after sending the request.
+	 *
+	 * Will automatically authenticate when receiving a `401` HTTP status code
+	 * then continue retrying sending initial request.
 	 *
 	 * @param string $method
 	 * @param string $path
@@ -212,11 +219,11 @@ class Service extends \lithium\core\Object {
 	 * @param array $options passed to request and socket
 	 * @return string
 	 */
-	public function send($method, $path = null, $data = array(), array $options = array()) {
-		$defaults = array('return' => 'body');
+	public function send($method, $path = null, $data = [], array $options = []) {
+		$defaults = ['return' => 'body'];
 		$options += $defaults;
 		$request = $this->_request($method, $path, $data, $options);
-		$options += array('message' => $request);
+		$options += ['message' => $request];
 
 		if (!$this->connection || !$this->connection->open($options)) {
 			return;
@@ -224,9 +231,9 @@ class Service extends \lithium\core\Object {
 		$response = $this->connection->send($request, $options);
 		$this->connection->close();
 
-		if ($response->status['code'] == 401 && $auth = $response->digest()) {
+		if ($response->status['code'] == 401 && ($auth = $response->digest())) {
 			$request->auth = $auth;
-			$this->connection->open(array('message' => $request) + $options);
+			$this->connection->open(['message' => $request] + $options);
 			$response = $this->connection->send($request, $options);
 			$this->connection->close();
 		}
@@ -251,13 +258,13 @@ class Service extends \lithium\core\Object {
 	 *         string or POST/PUT/PATCH data, and URL.
 	 */
 	protected function _request($method, $path, $data, $options) {
-		$defaults = array('type' => 'form');
+		$defaults = ['type' => 'form'];
 		$options += $defaults + $this->_config;
 
-		$request = $this->_instance('request', $options);
+		$request = Libraries::instance(null, 'request', $options, $this->_classes);
 		$request->path = str_replace('//', '/', "{$request->path}{$path}");
 		$request->method = $method = strtoupper($method);
-		$hasBody = in_array($method, array('POST', 'PUT', 'PATCH'));
+		$hasBody = in_array($method, ['POST', 'PUT', 'PATCH']);
 		$hasBody ? $request->body($data) : $request->query = $data;
 		return $request;
 	}

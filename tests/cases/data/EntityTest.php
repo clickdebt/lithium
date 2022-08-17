@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2011, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\cases\data;
@@ -16,39 +17,39 @@ class EntityTest extends \lithium\test\Unit {
 	protected $_model = 'lithium\tests\mocks\data\MockPost';
 
 	public function testSchemaAccess() {
-		$fields = array('foo' => array('type' => 'string'));
+		$fields = ['foo' => ['type' => 'string']];
 		$schema = new Schema(compact('fields'));
 		$entity = new Entity(compact('schema'));
 		$this->assertEqual($schema, $entity->schema());
 	}
 
 	public function testPropertyAccess() {
-		$entity = new Entity(array(
+		$entity = new Entity([
 			'model' => 'lithium\tests\mocks\data\MockPost',
 			'exists' => false
-		));
+		]);
 		$this->assertEqual('lithium\tests\mocks\data\MockPost', $entity->model());
 		$this->assertFalse($entity->exists());
 
-		$entity = new Entity(array('exists' => true));
+		$entity = new Entity(['exists' => true]);
 		$this->assertTrue($entity->exists());
 
-		$expected = array(
-			'exists' => true, 'data' => array(), 'update' => array(), 'increment' => array()
-		);
+		$expected = [
+			'exists' => true, 'data' => [], 'update' => [], 'increment' => []
+		];
 		$this->assertEqual($expected, $entity->export());
 	}
 
 	public function testPropertyIssetEmpty() {
-		$entity = new Entity(array(
+		$entity = new Entity([
 			'model' => 'lithium\tests\mocks\data\MockPost',
 			'exists' => true,
-			'data' => array('test_field' => 'foo'),
-			'relationships' => array('test_relationship' => array('test_me' => 'bar'))
-		));
+			'data' => ['test_field' => 'foo'],
+			'relationships' => ['test_relationship' => ['test_me' => 'bar']]
+		]);
 
 		$this->assertEqual('foo', $entity->test_field);
-		$this->assertEqual(array('test_me' => 'bar'), $entity->test_relationship);
+		$this->assertEqual(['test_me' => 'bar'], $entity->test_relationship);
 
 		$this->assertFalse(isset($entity->field));
 		$this->assertTrue(isset($entity->test_relationship));
@@ -61,7 +62,7 @@ class EntityTest extends \lithium\test\Unit {
 	}
 
 	public function testIncrement() {
-		$entity = new Entity(array('data' => array('counter' => 0)));
+		$entity = new Entity(['data' => ['counter' => 0]]);
 		$this->assertEqual(0, $entity->counter);
 
 		$entity->increment('counter');
@@ -78,51 +79,55 @@ class EntityTest extends \lithium\test\Unit {
 		$entity->bar = 'blah';
 		$entity->sync();
 
-		$this->expectException("/^Field 'bar' cannot be incremented.$/");
-		$entity->increment('bar');
+		$this->assertException("/^Field `'bar'` cannot be incremented.$/", function() use ($entity) {
+			$entity->increment('bar');
+		});
 	}
 
 	public function testMethodDispatch() {
 		$model = $this->_model;
-		$data = array('foo' => true);
+		$data = ['foo' => true];
 
 		$entity = new Entity(compact('model', 'data'));
 		$this->assertTrue($entity->validates());
 
-		$model::instanceMethods(array('testInstanceMethod' => function($entity) {
+		$model::instanceMethods(['testInstanceMethod' => function($entity) {
 			return 'testInstanceMethod';
-		}));
+		}]);
 		$this->assertEqual('testInstanceMethod', $entity->testInstanceMethod($entity));
 
-		$this->expectException("/^Unhandled method call `foo`.$/");
-		$entity->foo();
+		$this->assertException("/^Unhandled method call `foo`.$/", function() use ($entity) {
+			$entity->foo();
+		});
 	}
 
 	public function testMethodDispatchWithNoModel() {
-		$data = array('foo' => true);
+		$data = ['foo' => true];
 		$entity = new Entity(compact('data'));
-		$this->expectException("/^No model bound to call `foo`.$/");
-		$entity->foo();
+		$this->assertException("/^No model bound to call `foo`.$/", function() use ($entity) {
+			$entity->foo();
+		});
 	}
 
 	public function testMethodDispatchWithEntityAsModel() {
-		$data = array('foo' => true);
+		$data = ['foo' => true];
 		$model = 'lithium\data\Entity';
 		$entity = new Entity(compact('model', 'data'));
-		$this->expectException("/^No model bound to call `foo`.$/");
-		$entity->foo();
+		$this->assertException("/^No model bound to call `foo`.$/", function() use ($entity) {
+			$entity->foo();
+		});
 	}
 
 	public function testErrors() {
 		$entity = new Entity();
-		$errors = array('foo' => 'Something bad happened.');
-		$this->assertEqual(array(), $entity->errors());
+		$errors = ['foo' => 'Something bad happened.'];
+		$this->assertEqual([], $entity->errors());
 
 		$entity->errors($errors);
 		$this->assertEqual($errors, $entity->errors());
 		$this->assertEqual('Something bad happened.', $entity->errors('foo'));
 
-		$otherError = array('bar' => 'Something really bad happened.');
+		$otherError = ['bar' => 'Something really bad happened.'];
 		$errors += $otherError;
 		$entity->errors($otherError);
 		$this->assertEqual($errors, $entity->errors());
@@ -134,10 +139,10 @@ class EntityTest extends \lithium\test\Unit {
 
 	public function testResetErrors() {
 		$entity = new Entity();
-		$errors = array(
+		$errors = [
 			'foo' => 'Something bad happened.',
 			'bar' => 'Something really bad happened.'
-		);
+		];
 
 		$entity->errors($errors);
 		$this->assertEqual($errors, $entity->errors());
@@ -148,10 +153,10 @@ class EntityTest extends \lithium\test\Unit {
 
 	public function testAppendingErrors() {
 		$entity = new Entity();
-		$expected = array(
+		$expected = [
 			'Something bad happened.',
 			'Something really bad happened.'
-		);
+		];
 
 		$entity->errors('foo', $expected[0]);
 		$entity->errors('foo', $expected[1]);
@@ -162,13 +167,13 @@ class EntityTest extends \lithium\test\Unit {
 
 	public function testAppendingErrorsWithArraySyntax() {
 		$entity = new Entity();
-		$expected = array(
+		$expected = [
 			'Something bad happened.',
 			'Something really bad happened.'
-		);
+		];
 
-		$entity->errors(array('foo' => $expected[0]));
-		$entity->errors(array('foo' => $expected[1]));
+		$entity->errors(['foo' => $expected[0]]);
+		$entity->errors(['foo' => $expected[1]]);
 
 		$this->assertCount(1, $entity->errors());
 		$this->assertEqual($expected, $entity->errors('foo'));
@@ -176,20 +181,20 @@ class EntityTest extends \lithium\test\Unit {
 
 	public function testAppendingErrorsWithMixedSyntax() {
 		$entity = new Entity();
-		$expected = array(
+		$expected = [
 			'Something bad happened.',
 			'Something really bad happened.'
-		);
+		];
 
 		$entity->errors('foo', $expected[0]);
-		$entity->errors(array('foo' => $expected[1]));
+		$entity->errors(['foo' => $expected[1]]);
 
 		$this->assertCount(1, $entity->errors());
 		$this->assertEqual($expected, $entity->errors('foo'));
 	}
 
 	public function testConversion() {
-		$data = array('foo' => '!!', 'bar' => '??', 'baz' => '--');
+		$data = ['foo' => '!!', 'bar' => '??', 'baz' => '--'];
 		$entity = new Entity(compact('data'));
 
 		$this->assertEqual($data, $entity->to('array'));
@@ -200,11 +205,11 @@ class EntityTest extends \lithium\test\Unit {
 	public function testModified() {
 		$entity = new Entity();
 
-		$this->assertEqual(array(), $entity->modified());
+		$this->assertEqual([], $entity->modified());
 
-		$data = array('foo' => 'bar', 'baz' => 'dib');
+		$data = ['foo' => 'bar', 'baz' => 'dib'];
 		$entity->set($data);
-		$this->assertEqual(array('foo' => true, 'baz' => true), $entity->modified());
+		$this->assertEqual(['foo' => true, 'baz' => true], $entity->modified());
 
 		$this->assertTrue($entity->modified('foo'));
 		$this->assertTrue($entity->modified('baz'));
@@ -214,14 +219,14 @@ class EntityTest extends \lithium\test\Unit {
 
 		$subentity = new Entity();
 		$subentity->set($data);
-		$entity->set(array('ble' => $subentity));
-		$this->assertEqual(array('foo' => true, 'baz' => true, 'ble' => true), $entity->modified());
+		$entity->set(['ble' => $subentity]);
+		$this->assertEqual(['foo' => true, 'baz' => true, 'ble' => true], $entity->modified());
 
 		$this->assertTrue($entity->ble->modified('foo'));
 		$this->assertEmpty($entity->ble->modified('iak'));
-		$this->assertEqual($entity->ble->modified(), array('foo' => true, 'baz' => true));
+		$this->assertEqual($entity->ble->modified(), ['foo' => true, 'baz' => true]);
 
-		$data = array('foo' => 'bar', 'baz' => 'dib'); //it's the default data array in the test
+		$data = ['foo' => 'bar', 'baz' => 'dib']; //it's the default data array in the test
 		$entity = new Entity();
 		$entity->set($data);
 		$entity->sync();
@@ -229,7 +234,7 @@ class EntityTest extends \lithium\test\Unit {
 		/* Checking empty values */
 		$entity->foo = '';
 		$this->assertTrue($entity->modified('foo'));
-		$this->assertEqual(array('foo' => true, 'baz' => false), $entity->modified());
+		$this->assertEqual(['foo' => true, 'baz' => false], $entity->modified());
 
 		/* and checking null values */
 		$entity->sync();
@@ -256,39 +261,18 @@ class EntityTest extends \lithium\test\Unit {
 		$model::meta('title', $old);
 	}
 
-	public function testRespondsTo() {
-		$model = $this->_model;
-		$data = array('foo' => true);
-		$entity = new Entity(compact('model', 'data'));
-
-		$this->assertTrue($entity->respondsTo('foobar'));
-		$this->assertTrue($entity->respondsTo('findByFoo'));
-		$this->assertFalse($entity->respondsTo('barbaz'));
-		$this->assertTrue($entity->respondsTo('model'));
-		$this->assertTrue($entity->respondsTo('instances'));
-	}
-
-	public function testRespondsToParentCall() {
-		$model = $this->_model;
-		$data = array('foo' => true);
-		$entity = new Entity(compact('model', 'data'));
-
-		$this->assertTrue($entity->respondsTo('applyFilter'));
-		$this->assertFalse($entity->respondsTo('fooBarBaz'));
-	}
-
 	public function testHandlers() {
-		$handlers = array(
+		$handlers = [
 			'stdClass' => function($value) { return substr($value->scalar, -1); }
-		);
-		$array = new Entity(compact('handlers') + array(
-			'data' => array(
+		];
+		$array = new Entity(compact('handlers') + [
+			'data' => [
 				'value' => (object) 'hello'
-			)
-		));
+			]
+		]);
 
-		$expected = array('value' => 'o');
-		$this->assertIdentical($expected, $array->to('array', array('indexed' => false)));
+		$expected = ['value' => 'o'];
+		$this->assertIdentical($expected, $array->to('array', ['indexed' => false]));
 	}
 }
 

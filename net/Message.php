@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\net;
@@ -14,10 +15,10 @@ use ReflectionProperty;
 /**
  * Base message class for any URI based request/response.
  *
- * @see http://tools.ietf.org/html/rfc3986#section-1.1.1
- * @see http://en.wikipedia.org/wiki/URI_scheme#Generic_syntax
+ * @link http://tools.ietf.org/html/rfc3986#section-1.1.1
+ * @link http://en.wikipedia.org/wiki/URI_scheme#Generic_syntax
  */
-class Message extends \lithium\core\Object {
+class Message extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * The URI scheme.
@@ -69,9 +70,9 @@ class Message extends \lithium\core\Object {
 	public $body = null;
 
 	/**
-	 * Adds config values to the public properties when a new object is created.
+	 * Constructor Adds config values to the public properties when a new object is created.
 	 *
-	 * @param array $config Configuration options : default value
+	 * @param array $config Available configuration options are:
 	 *        - `'scheme'` _string_: 'tcp'
 	 *        - `'host'` _string_: 'localhost'
 	 *        - `'port'` _integer_: null
@@ -79,9 +80,10 @@ class Message extends \lithium\core\Object {
 	 *        - `'password'` _string_: null
 	 *        - `'path'` _string_: null
 	 *        - `'body'` _mixed_: null
+	 * @return void
 	 */
-	public function __construct(array $config = array()) {
-		$defaults = array(
+	public function __construct(array $config = []) {
+		$defaults = [
 			'scheme' => 'tcp',
 			'host' => 'localhost',
 			'port' => null,
@@ -89,7 +91,7 @@ class Message extends \lithium\core\Object {
 			'password' => null,
 			'path' => null,
 			'body' => null
-		);
+		];
 		$config += $defaults;
 
 		foreach (array_intersect_key(array_filter($config), $defaults) as $key => $value) {
@@ -106,8 +108,8 @@ class Message extends \lithium\core\Object {
 	 *        - `'buffer'` _integer_: split the body string
 	 * @return array
 	 */
-	public function body($data = null, $options = array()) {
-		$default = array('buffer' => null);
+	public function body($data = null, $options = []) {
+		$default = ['buffer' => null];
 		$options += $default;
 		$this->body = array_merge((array) $this->body, (array) $data);
 		$body = join("\r\n", $this->body);
@@ -122,10 +124,10 @@ class Message extends \lithium\core\Object {
 	 * @param array $options
 	 * @return mixed
 	 */
-	public function to($format, array $options = array()) {
+	public function to($format, array $options = []) {
 		switch ($format) {
 			case 'array':
-				$array = array();
+				$array = [];
 				$class = new ReflectionClass(get_class($this));
 
 				foreach ($class->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
@@ -136,8 +138,8 @@ class Message extends \lithium\core\Object {
 				$host = $this->host . ($this->port ? ":{$this->port}" : '');
 				return "{$this->scheme}://{$host}{$this->path}";
 			case 'context':
-				$defaults = array('content' => $this->body(), 'ignore_errors' => true);
-				return array($this->scheme => $options + $defaults);
+				$defaults = ['content' => $this->body(), 'ignore_errors' => true];
+				return [$this->scheme => $options + $defaults];
 			case 'string':
 			default:
 				return (string) $this;

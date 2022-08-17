@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2011, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\tests\cases\storage\session\strategy;
@@ -13,16 +14,21 @@ use lithium\tests\mocks\storage\session\strategy\MockCookieSession;
 
 class HmacTest extends \lithium\test\Unit {
 
+	public $mock = 'lithium\tests\mocks\storage\session\strategy\MockCookieSession';
+
+	public $secret = 'foobar';
+
+	public $hmac = null;
+
 	public function setUp() {
-		$this->secret = 'foobar';
-		$this->Hmac = new Hmac(array('secret' => $this->secret));
-		$this->mock = 'lithium\tests\mocks\storage\session\strategy\MockCookieSession';
 		MockCookieSession::reset();
+		$this->hmac = new Hmac(['secret' => $this->secret]);
 	}
 
 	public function testConstructException() {
-		$this->expectException('/HMAC strategy requires a secret key./');
-		$hmac = new Hmac();
+		$this->assertException('/HMAC strategy requires a secret key./', function() {
+			 new Hmac();
+		});
 	}
 
 	public function testConstruct() {
@@ -37,12 +43,12 @@ class HmacTest extends \lithium\test\Unit {
 		$oldData = MockCookieSession::data();
 		$class = $this->mock;
 
-		$result = $this->Hmac->write($value, compact('key', 'class'));
+		$result = $this->hmac->write($value, compact('key', 'class'));
 		$this->assertEqual($value, $result);
 
-		$signature = hash_hmac('sha1', serialize(array($key => $value) + $oldData), $this->secret);
+		$signature = hash_hmac('sha1', serialize([$key => $value] + $oldData), $this->secret);
 		$signedData = MockCookieSession::data();
-		$this->assertEqual($signedData, $oldData + array('__signature' => $signature));
+		$this->assertEqual($signedData, $oldData + ['__signature' => $signature]);
 	}
 
 	public function testReadWithValidSignature() {
@@ -53,15 +59,19 @@ class HmacTest extends \lithium\test\Unit {
 		$this->assertEqual($signature, $result);
 
 		$value = 'data_read';
-		$result = $this->Hmac->read($value, compact('class'));
+		$result = $this->hmac->read($value, compact('class'));
 		$this->assertEqual($value, $result);
 	}
 
 	public function testReadWithNoSignature() {
 		$class = $this->mock;
 		$value = 'data_read';
-		$this->expectException('/HMAC signature not found./');
-		$result = $this->Hmac->read($value, compact('class'));
+		$hmac = $this->hmac;
+
+		$expected = '/HMAC signature not found./';
+		$this->assertException($expected, function() use ($hmac, $value, $class) {
+			 $hmac->read($value, compact('class'));
+		});
 	}
 
 	public function testReadWithInvalidSignature() {
@@ -72,8 +82,12 @@ class HmacTest extends \lithium\test\Unit {
 		$this->assertEqual($signature, $result);
 
 		$value = 'data_read_that_wont_match_signature';
-		$this->expectException('/Possible data tampering: HMAC signature does not match data./');
-		$result = $this->Hmac->read($value, compact('class'));
+		$expected = '/Possible data tampering: HMAC signature does not match data./';
+		$hmac = $this->hmac;
+
+		$this->assertException($expected, function() use ($hmac, $value, $class) {
+			$hmac->read($value, compact('class'));
+		});
 	}
 
 	public function testDelete() {
@@ -87,7 +101,7 @@ class HmacTest extends \lithium\test\Unit {
 		unset($newData[$key]);
 
 		$expectedSignature = hash_hmac('sha1', serialize($newData), $this->secret);
-		$result = $this->Hmac->delete('foo', compact('class', 'key'));
+		$result = $this->hmac->delete('foo', compact('class', 'key'));
 
 		$this->assertEqual('foo', $result);
 		$signature = MockCookieSession::read('__signature');

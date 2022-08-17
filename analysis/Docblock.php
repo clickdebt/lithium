@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2012, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\analysis;
@@ -15,18 +16,18 @@ namespace lithium\analysis;
  * a reflection-based API generator, a code metrics analyzer, and various other code or structural
  * analysis tools.
  */
-class Docblock extends \lithium\core\StaticObject {
+class Docblock extends \lithium\core\StaticObjectDeprecated {
 
 	/**
 	 * List of supported docblock tags.
 	 *
 	 * @var array
 	 */
-	public static $tags = array(
+	public static $tags = [
 		'todo', 'discuss', 'fix', 'important', 'var',
 		'param', 'return', 'throws', 'see', 'link',
-		'task', 'dependencies', 'filter'
-	);
+		'task', 'dependencies', 'filter', 'deprecated'
+	];
 
 	/**
 	 * Parses a doc block into its major components of `description`, `text` and `tags`.
@@ -37,14 +38,14 @@ class Docblock extends \lithium\core\StaticObject {
 	 */
 	public static function comment($comment) {
 		$text = null;
-		$tags = array();
+		$tags = [];
 		$description = null;
 		$comment = trim(preg_replace('/^(\s*\/\*\*|\s*\*{1,2}\/|\s*\* ?)/m', '', $comment));
 		$comment = str_replace("\r\n", "\n", $comment);
 
 		if ($items = preg_split('/\n@/ms', $comment, 2)) {
-			list($description, $tags) = $items + array('', '');
-			$tags = $tags ? static::tags("@{$tags}") : array();
+			list($description, $tags) = $items + ['', ''];
+			$tags = $tags ? static::tags("@{$tags}") : [];
 		}
 
 		if (strpos($description, "\n\n")) {
@@ -70,7 +71,7 @@ class Docblock extends \lithium\core\StaticObject {
 		$string = trim($string);
 
 		$result = preg_split($regex, "\n$string", -1, PREG_SPLIT_DELIM_CAPTURE);
-		$tags = array();
+		$tags = [];
 
 		for ($i = 1; $i < count($result) - 1; $i += 2) {
 			$type = trim(strtolower($result[$i]));
@@ -85,7 +86,6 @@ class Docblock extends \lithium\core\StaticObject {
 		}
 
 		if (isset($tags['param'])) {
-			$params = $tags['param'];
 			$tags['params'] = static::_params((array) $tags['param']);
 			unset($tags['param']);
 		}
@@ -100,12 +100,12 @@ class Docblock extends \lithium\core\StaticObject {
 	 *         associative array containing `'type'` and `'text'` keys.
 	 */
 	protected static function _params(array $params) {
-		$result = array();
+		$result = [];
 		foreach ($params as $param) {
 			$param = explode(' ', $param, 3);
 			$type = $name = $text = null;
 
-			foreach (array('type', 'name', 'text') as $i => $key) {
+			foreach (['type', 'name', 'text'] as $i => $key) {
 				if (!isset($param[$i])) {
 					break;
 				}

@@ -1,13 +1,15 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃: the most RAD framework for PHP (http://li3.me)
  *
- * @copyright     Copyright 2013, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2009, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace lithium\security;
 
+use lithium\aop\Filters;
 use lithium\core\ConfigException;
 
 /**
@@ -28,15 +30,15 @@ use lithium\core\ConfigException;
  * the session adapter. This prevents a possible password hash to be leaked in a cookie (for
  * example). You can also be very specific on what you want to store in the session:
  *
- * {{{
- * Auth::config(array(
- *   'default' => array(
- *      'session' => array(
- *        'persist' => array('username', 'email')
- *      )
- *   )
- * ));
- * }}}
+ * ```
+ * Auth::config([
+ *   'default' => [
+ *      'session' => [
+ *        'persist' => ['username', 'email']
+ *      ]
+ *   ]
+ * ]);
+ * ```
  *
  * You can also pass an optional `persist` param to the `check` method to override this default.
  *
@@ -51,7 +53,7 @@ class Auth extends \lithium\core\Adaptable {
 	 *
 	 * @var object `Collection` of authentication configurations.
 	 */
-	protected static $_configurations = array();
+	protected static $_configurations = [];
 
 	/**
 	 * Libraries::locate() compatible path to adapters for this class.
@@ -66,9 +68,9 @@ class Auth extends \lithium\core\Adaptable {
 	 *
 	 * @var array Associative array of class names & their namespaces.
 	 */
-	protected static $_classes = array(
+	protected static $_classes = [
 		'session' => 'lithium\storage\Session'
-	);
+	];
 
 	/**
 	 * Called when an adapter configuration is first accessed, this method sets the default
@@ -82,12 +84,12 @@ class Auth extends \lithium\core\Adaptable {
 	 *         generated default values.
 	 */
 	protected static function _initConfig($name, $config) {
-		$defaults = array('session' => array(
+		$defaults = ['session' => [
 			'key' => $name,
 			'class' => static::$_classes['session'],
-			'options' => array(),
-			'persist' => array()
-		));
+			'options' => [],
+			'persist' => []
+		]];
 		$config = parent::_initConfig($name, $config) + $defaults;
 		$config['session'] += $defaults['session'];
 		return $config;
@@ -117,26 +119,27 @@ class Auth extends \lithium\core\Adaptable {
 	 *                user information is, by default, written to the session. Set this to `false`
 	 *                to disable session writing for this authentication check.
 	 *              - `'persist'` _array_: A list of fields that should be stored in the session.
+	 *                If no list is provided will store all fields in the session except
+	 *                the `'password'` field.
 	 * @return array After a successful credential check against the adapter (or a successful
 	 *         lookup against the current session), returns an array of user information from the
 	 *         storage backend used by the configured adapter.
 	 * @filter
 	 */
-	public static function check($name, $credentials = null, array $options = array()) {
+	public static function check($name, $credentials = null, array $options = []) {
 		$config = static::config($name);
-		$defaults = array(
+		$defaults = [
 			'checkSession' => true,
 			'writeSession' => true,
 			'persist' => $config['session']['persist'] ?: static::_config('persist')
-		);
+		];
 
 		$options += $defaults;
 		$params = compact('name', 'credentials', 'options');
 
-		return static::_filter(__FUNCTION__, $params, function($self, $params) {
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
 			extract($params);
-			$config = $self::invokeMethod('_config', array($name));
-			$persist = $options['persist'];
+			$config = static::_config($name);
 
 			if ($config === null) {
 				throw new ConfigException("Configuration `{$name}` has not been defined.");
@@ -149,13 +152,13 @@ class Auth extends \lithium\core\Adaptable {
 				}
 			}
 
-			if (($credentials) && $data = $self::adapter($name)->check($credentials, $options)) {
+			if (($credentials) && $data = static::adapter($name)->check($credentials, $options)) {
 				if ($options['persist'] && is_array($data)) {
 					$data = array_intersect_key($data, array_fill_keys($options['persist'], true));
 				} elseif (is_array($data)) {
 					unset($data['password']);
 				}
-				return ($options['writeSession']) ? $self::set($name, $data) : $data;
+				return ($options['writeSession']) ? static::set($name, $data) : $data;
 			}
 			return false;
 		});
@@ -178,15 +181,15 @@ class Auth extends \lithium\core\Adaptable {
 	 *         rejects the data.
 	 * @filter
 	 */
-	public static function set($name, $data, array $options = array()) {
+	public static function set($name, $data, array $options = []) {
 		$params = compact('name', 'data', 'options');
 
-		return static::_filter(__FUNCTION__, $params, function($self, $params) {
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
 			extract($params);
-			$config = $self::invokeMethod('_config', array($name));
+			$config = static::_config($name);
 			$session = $config['session'];
 
-			if ($data = $self::adapter($name)->set($data, $options)) {
+			if ($data = static::adapter($name)->set($data, $options)) {
 				$session['class']::write($session['key'], $data, $options + $session['options']);
 				return $data;
 			}
@@ -208,19 +211,21 @@ class Auth extends \lithium\core\Adaptable {
 	 * @return void
 	 * @filter
 	 */
-	public static function clear($name, array $options = array()) {
-		$defaults = array('clearSession' => true);
+	public static function clear($name, array $options = []) {
+		$defaults = ['clearSession' => true];
 		$options += $defaults;
 
-		return static::_filter(__FUNCTION__, compact('name', 'options'), function($self, $params) {
+		$params = compact('name', 'options');
+
+		return Filters::run(get_called_class(), __FUNCTION__, $params, function($params) {
 			extract($params);
-			$config = $self::invokeMethod('_config', array($name));
+			$config = static::_config($name);
 			$session = $config['session'];
 
 			if ($options['clearSession']) {
 				$session['class']::delete($session['key'], $session['options']);
 			}
-			$self::adapter($name)->clear($options);
+			static::adapter($name)->clear($options);
 		});
 	}
 }
