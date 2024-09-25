@@ -605,6 +605,7 @@ class Model extends \lithium\core\StaticObjectDeprecated {
 			$type = 'first';
 		}
 
+		$self->_meta['connection'] = 'read_replica';
 		$options += (array) $self->_query;
 		$meta = ['meta' => $self->_meta, 'name' => get_called_class()];
 		$params = compact('type', 'options');
