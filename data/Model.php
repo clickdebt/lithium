@@ -613,14 +613,17 @@ class Model extends \lithium\core\StaticObjectDeprecated {
 		$implementation = function($params) use ($self, $meta) {
 			$options = $params['options'] + ['type' => 'read', 'model' => $meta['name']];
 			$query = Libraries::instance(null, 'query', $options, $self->_classes);
-
-			return static::connection()->read($query, $options);
+			$read = static::connection()->read($query, $options);
+			$self->_meta['connection'] = 'default';
+			return $read;
 		};
 		if (isset($self->_finders[$type])) {
 			$finder = $self->_finders[$type];
 
 			$implementation = function($params) use ($finder, $implementation) {
-				return $finder($params, $implementation);
+				$read =  $finder($params, $implementation);
+				$self->_meta['connection'] = 'default';
+				return $read;
 			};
 		}
 		return Filters::run(get_called_class(), __FUNCTION__, $params, $implementation);
