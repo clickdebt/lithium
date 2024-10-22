@@ -605,7 +605,7 @@ class Model extends \lithium\core\StaticObjectDeprecated {
 			$type = 'first';
 		}
 
-		$self->_meta['connection'] = $self->_meta['connection'] == 'master' ? 'master' : 'read_replica';
+		// $self->_meta['connection'] = $self->_meta['connection'] == 'master' ? 'master' : 'read_replica';
 		$options += (array) $self->_query;
 		$meta = ['meta' => $self->_meta, 'name' => get_called_class()];
 		$params = compact('type', 'options');
@@ -614,7 +614,7 @@ class Model extends \lithium\core\StaticObjectDeprecated {
 			$options = $params['options'] + ['type' => 'read', 'model' => $meta['name']];
 			$query = Libraries::instance(null, 'query', $options, $self->_classes);
 			$read = static::connection()->read($query, $options);
-			$self->_meta['connection'] = 'default';
+			// $self->_meta['connection'] = 'default';
 			return $read;
 		};
 		if (isset($self->_finders[$type])) {
@@ -622,7 +622,7 @@ class Model extends \lithium\core\StaticObjectDeprecated {
 
 			$implementation = function($params) use ($finder, $implementation) {
 				$read =  $finder($params, $implementation);
-				$self->_meta['connection'] = 'default';
+				// $self->_meta['connection'] = 'default';
 				return $read;
 			};
 		}
