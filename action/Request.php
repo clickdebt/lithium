@@ -233,6 +233,33 @@ class Request extends \lithium\net\http\Request {
 			}
 		}
 
+		\lithium\aop\Filters::apply(\lithium\action\Dispatcher::class, 'run', function($params, $next) {
+			$request = $params['request'];
+		
+			// Inline recursive sanitization function
+			$sanitizeInput = function($data) use (&$sanitizeInput) {
+				return array_map(function($value) use (&$sanitizeInput) {
+					if (is_array($value)) {
+						// Recursively sanitize array values
+						return $sanitizeInput($value);
+					}
+					if (is_string($value)) {
+						// Remove all HTML tags and encode special characters to prevent XSS
+						$value = strip_tags($value);
+						return $value;
+					}
+					return $value; // Return non-string values as is
+				}, $data);
+			};
+		
+			// Sanitize all incoming data
+			$request->data = $sanitizeInput($request->data);
+			$request->query = $sanitizeInput($request->query);
+			$request->cookies = $sanitizeInput($request->cookies);
+		
+			return $next($params);
+		});
+
 		parent::__construct($config);
 	}
 
