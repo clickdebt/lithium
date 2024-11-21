@@ -244,8 +244,24 @@ class Request extends \lithium\net\http\Request {
 						return $sanitizeInput($value);
 					}
 					if (is_string($value)) {
-						// Remove all HTML tags and encode special characters to prevent XSS
-						$value = strip_tags($value);
+						$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+
+						$patterns = [
+							'/<script.*?>.*?<\/script>/is',
+							'/&lt;script.*?&gt;.*?&lt;\/script&gt;/is',
+							'/<style.*?>.*?<\/style>/is',
+							'/&lt;style.*?&gt;.*?&lt;\/style&gt;/is',
+							'/<.*?on\w+=\".*?\".*?>/is',
+							'/<iframe.*?>.*?<\/iframe>/is',
+							'/<embed.*?>.*?<\/embed>/is',
+							'/<object.*?>.*?<\/object>/is',
+							'/<img.*?on\w+=\".*?\".*?>/is',
+							'/javascript:/is'
+						];
+						
+						foreach ($patterns as $pattern) {
+							$value = preg_replace($pattern, '', $value);
+						}
 						return $value;
 					}
 					return $value; // Return non-string values as is
