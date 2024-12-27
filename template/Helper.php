@@ -173,7 +173,7 @@ abstract class Helper extends \lithium\core\ObjectDeprecated {
 				return null;
 			}
 		}
-		$value = (string) $value;
+		$value = (string) is_array($value) ? $value['class']: $value;
 
 		if ($options['escape']) {
 			return sprintf($options['format'], $this->escape($key), $this->escape($value));
