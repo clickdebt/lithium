@@ -9,6 +9,7 @@
 
 namespace lithium\data;
 
+use ReturnTypeWillChange;
 use RuntimeException;
 
 /**
@@ -162,22 +163,22 @@ class Schema extends \lithium\core\ObjectDeprecated implements \ArrayAccess {
 		$this->_fields += $schema->fields();
 	}
 
-	public function offsetGet($key) {
+	#[ReturnTypeWillChange] public function offsetGet($key) {
 		return $this->fields($key);
 	}
 
-	public function offsetSet($key, $value) {
+	#[ReturnTypeWillChange] public function offsetSet($key, $value) {
 		if ($this->_locked) {
 			throw new RuntimeException("Schema cannot be modified.");
 		}
 		$this->_fields[$key] = $value;
 	}
 
-	public function offsetExists($key) {
+	#[ReturnTypeWillChange] public function offsetExists($key) {
 		return isset($this->_fields[$key]);
 	}
 
-	public function offsetUnset($key) {
+	#[ReturnTypeWillChange] public function offsetUnset($key) {
 		unset($this->_fields[$key]);
 	}
 }
