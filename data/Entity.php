@@ -29,7 +29,7 @@ use lithium\analysis\Inspector;
  * @see lithium\template\helper\Form
  * @see lithium\data\Entity::serialize()
  */
-class Entity extends \lithium\core\ObjectDeprecated implements \Serializable {
+class Entity extends \lithium\core\ObjectDeprecated {
 
 	/**
 	 * Fully-namespaced class name of model that this record is bound to. Instance methods declared
@@ -528,6 +528,15 @@ class Entity extends \lithium\core\ObjectDeprecated implements \Serializable {
 	 */
 	public function __toString() {
 		return (string) $this->__call('title', []);
+	}
+
+	public function __serialize(): array {
+		$vars = get_object_vars($this);
+		unset($vars['_schema']);
+		unset($vars['_config']['schema']);
+		unset($vars['_handlers']);
+
+		return $vars;
 	}
 
 	/**
