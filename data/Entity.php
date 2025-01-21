@@ -149,12 +149,14 @@ class Entity extends \lithium\core\ObjectDeprecated {
 	 * @return mixed Result.
 	 */
 	public function &__get($name) {
-		if (isset($this->_relationships[$name])) {
+		if (!is_array($name) && isset($this->_relationships[$name])) {
 			return $this->_relationships[$name];
 		}
-		if (isset($this->_updated[$name])) {
+
+		if (!is_array($name) && isset($this->_updated[$name])) {
 			return $this->_updated[$name];
 		}
+
 		$null = null;
 		return $null;
 	}
