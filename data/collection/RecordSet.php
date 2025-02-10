@@ -52,6 +52,16 @@ class RecordSet extends \lithium\data\Collection {
 	 */
 	protected $_seen = [];
 
+	public function __serialize(): array {
+        return get_object_vars($this);
+    }
+
+    public function __unserialize(array $data): void {
+        foreach ($data as $key => $value) {
+            $this->$key = $value;
+        }
+    }
+
 	/**
 	 * Initializes the record set and uses the database connection to get the column list contained
 	 * in the query that created this object.

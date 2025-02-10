@@ -203,7 +203,7 @@ class Command extends \lithium\core\ObjectDeprecated {
 	 *                       - `'style'` _string_: the style name to wrap around the output.
 	 * @return integer
 	 */
-	public function error($error = null, $options = ['nl' => 1]) {
+	public function error($error = null, array $options = ['nl' => 1]) {
 		return $this->_response('error', $error, $options);
 	}
 
