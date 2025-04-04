@@ -238,34 +238,36 @@ class Request extends \lithium\net\http\Request {
 		
 			// Inline recursive sanitization function
 			$sanitizeInput = function($data) use (&$sanitizeInput) {
-				return array_map(function($value) use (&$sanitizeInput) {
-					if (is_array($value)) {
-						// Recursively sanitize array values
-						return $sanitizeInput($value);
-					}
-					if (is_string($value)) {
-						$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
-
-						$patterns = [
-							'/<script.*?>.*?<\/script>/is',
-							'/&lt;script.*?&gt;.*?&lt;\/script&gt;/is',
-							'/<style.*?>.*?<\/style>/is',
-							'/&lt;style.*?&gt;.*?&lt;\/style&gt;/is',
-							'/<.*?on\w+=\".*?\".*?>/is',
-							'/<iframe.*?>.*?<\/iframe>/is',
-							'/<embed.*?>.*?<\/embed>/is',
-							'/<object.*?>.*?<\/object>/is',
-							'/<img.*?on\w+=\".*?\".*?>/is',
-							'/javascript:/is'
-						];
-						
-						foreach ($patterns as $pattern) {
-							$value = preg_replace($pattern, '', $value);
+				if(is_array($data)){
+					return array_map(function($value) use (&$sanitizeInput) {
+						if (is_array($value)) {
+							// Recursively sanitize array values
+							return $sanitizeInput($value);
 						}
-						return $value;
-					}
-					return $value; // Return non-string values as is
-				}, $data);
+						if (is_string($value)) {
+							$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+	
+							$patterns = [
+								'/<script.*?>.*?<\/script>/is',
+								'/&lt;script.*?&gt;.*?&lt;\/script&gt;/is',
+								'/<style.*?>.*?<\/style>/is',
+								'/&lt;style.*?&gt;.*?&lt;\/style&gt;/is',
+								'/<.*?on\w+=\".*?\".*?>/is',
+								'/<iframe.*?>.*?<\/iframe>/is',
+								'/<embed.*?>.*?<\/embed>/is',
+								'/<object.*?>.*?<\/object>/is',
+								'/<img.*?on\w+=\".*?\".*?>/is',
+								'/javascript:/is'
+							];
+							
+							foreach ($patterns as $pattern) {
+								$value = preg_replace($pattern, '', $value);
+							}
+							return $value;
+						}
+						return $value; // Return non-string values as is
+					}, $data);
+				}
 			};
 		
 			// Sanitize all incoming data
