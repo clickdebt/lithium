@@ -437,6 +437,9 @@ class Collection extends \lithium\core\ObjectDeprecated implements \ArrayAccess,
 	 * @return mixed The current item after rewinding, or `false` if the collection is empty.
 	 */
 	public function rewind() {
+		if($this->_data==null){
+			$this->_data=[];
+		}
 		return reset($this->_data);
 	}
 
