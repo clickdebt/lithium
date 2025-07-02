@@ -888,7 +888,7 @@ class Form extends \lithium\template\Helper {
 				(!isset($options['value']) || $options['value'] === null) &&
 				$name && $value = $this->binding($name)->data
 			);
-			$isZero = (isset($value) && ($value === 0 || $value === "0"));
+			$isZero = (isset($value) && ($value === 0 || $value === "0" || $value === 0.0));
 
 			if ($hasValue || $isZero) {
 				$options['value'] = $value;
