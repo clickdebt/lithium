@@ -312,7 +312,7 @@ class Html extends \lithium\template\Helper {
 		$options += isset($this->_metaLinks[$type]) ? $this->_metaLinks[$type] : [];
 
 		if ($type === 'icon') {
-			$url = $url ?: 'favicon.ico';
+			$url = $url ?: 'favicon.ico?v=v3';
 			$standard = $this->_render(__METHOD__, 'meta-link', compact('url', 'options'), [
 				'handlers' => ['url' => 'path']
 			]);
