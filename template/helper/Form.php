@@ -159,7 +159,7 @@ class Form extends \lithium\template\Helper {
 					return $model ? basename(str_replace('\\', '/', $model)) . $id : $id;
 				},
 				'name' => function($method, $name, $options) {
-					if (!strpos($name, '.')) {
+					if (!strpos((string)$name, '.')) {
 						return $name;
 					}
 					$name = explode('.', $name);
@@ -888,7 +888,7 @@ class Form extends \lithium\template\Helper {
 				(!isset($options['value']) || $options['value'] === null) &&
 				$name && $value = $this->binding($name)->data
 			);
-			$isZero = (isset($value) && ($value === 0 || $value === "0"));
+			$isZero = (isset($value) && ($value === 0 || $value === "0" || $value === 0.0));
 
 			if ($hasValue || $isZero) {
 				$options['value'] = $value;

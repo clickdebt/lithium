@@ -620,7 +620,7 @@ class Model extends \lithium\core\StaticObjectDeprecated {
 		if (isset($self->_finders[$type])) {
 			$finder = $self->_finders[$type];
 
-			$implementation = function($params) use ($finder, $implementation) {
+			$implementation = function($params) use ($finder, $implementation, $self) {
 				$read =  $finder($params, $implementation);
 				$self->_meta['connection'] = 'default';
 				return $read;

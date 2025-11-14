@@ -616,7 +616,7 @@ class Router extends \lithium\core\StaticObjectDeprecated {
 			return $url;
 		}
 		foreach ($context->persist as $key) {
-			$url += [$key => $context->params[$key]];
+			$url += [$key => $context->params[$key] ?? null];
 
 			if ($url[$key] === null) {
 				unset($url[$key]);

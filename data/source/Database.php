@@ -336,7 +336,7 @@ abstract class Database extends \lithium\data\Source {
 					throw new ConfigException($msg, null, $e);
 				break;
 			}
-			throw new ConfigException($e->getMessage(), null, $e);
+			throw new ConfigException($e->getMessage(), (int) $e->getCode(), $e);
 		}
 		$this->_isConnected = true;
 
@@ -1558,9 +1558,9 @@ abstract class Database extends \lithium\data\Source {
 		switch (true) {
 			case (is_bool($value)):
 				return 'boolean';
-			case (is_float($value) || preg_match('/^\d+\.\d+$/', $value)):
+			case (is_float($value) || (is_string($value) && preg_match('/^\d+\.\d+$/', $value))):
 				return 'float';
-			case (is_int($value) || preg_match('/^\d+$/', $value)):
+			case (is_int($value) || (is_string($value) && preg_match('/^\d+$/', $value))):
 				return 'integer';
 			case (is_string($value) && strlen($value) <= $this->_columns['string']['length']):
 				return 'string';
