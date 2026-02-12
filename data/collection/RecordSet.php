@@ -170,9 +170,15 @@ class RecordSet extends \lithium\data\Collection {
 			$offset = 0;
 
 			foreach ($this->_columns as $name => $fields) {
-				$record[$i][$name] = array_combine(
-					$fields, array_slice($row, $offset, ($count = count($fields)))
-				);
+				$count = count($fields);
+				$slice = array_slice($row, $offset, $count);
+				$sliceCount = count($slice);
+				if ($sliceCount < $count) {
+					$slice = array_pad($slice, $count, null);
+				} elseif ($sliceCount > $count) {
+					$slice = array_slice($slice, 0, $count);
+				}
+				$record[$i][$name] = $count > 0 ? array_combine($fields, $slice) : [];
 				$offset += $count;
 			}
 			$i++;
